@@ -22,7 +22,7 @@ jobs:
       - name: Setup MSVC
         uses: step-security/msvc-dev-cmd@v1
 
-      - name: Build Cross-pointer (Release /MT)
+      - name: Build CrossPointer (Release /MT)
         shell: pwsh
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -31,5 +31,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Cross-pointer
-          path: .\Cross-pointer.exe
+          name: CrossPointer
+          path: .\CrossPointer.exe
