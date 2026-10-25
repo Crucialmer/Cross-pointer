@@ -35,15 +35,18 @@ std::wstring GetConfigPath() {
 
   const std::filesystem::path exe_dir =
       std::filesystem::path(executable).parent_path();
-  const std::filesystem::path primary_config = exe_dir / L"Cross-pointer.ini";
-  const std::filesystem::path legacy_config = exe_dir / L"crosshair.ini";
+  const std::filesystem::path primary_config = exe_dir / L"CrossPointer.ini";
+  const std::filesystem::path legacy_config1 = exe_dir / L"Cross-pointer.ini";
+  const std::filesystem::path legacy_config2 = exe_dir / L"crosshair.ini";
 
-  // Portable mode: only look for or create config in the application directory.
   if (IsRegularFile(primary_config)) {
     return primary_config.wstring();
   }
-  if (IsRegularFile(legacy_config)) {
-    return legacy_config.wstring();
+  if (IsRegularFile(legacy_config1)) {
+    return legacy_config1.wstring();
+  }
+  if (IsRegularFile(legacy_config2)) {
+    return legacy_config2.wstring();
   }
   return primary_config.wstring();
 }
@@ -58,7 +61,6 @@ bool EnsureConfigExists(const std::wstring& path) {
   const std::filesystem::path config_path(path);
   if (IsRegularFile(config_path)) return true;
 
-  // Create config file in the program directory without probe files.
   HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                             FILE_ATTRIBUTE_NORMAL, nullptr);
   if (file == INVALID_HANDLE_VALUE) {
