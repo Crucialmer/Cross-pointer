@@ -35,51 +35,7 @@ jobs:
           New-Item -ItemType Directory -Path $pkgDir -Force | Out-Null
           Copy-Item "CrossPointer.exe" -Destination "$pkgDir\CrossPointer.exe"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
-
-          $guide = @"
-===========================================================
-  CrossPointer 🎯 极简屏幕十字辅助线 - 使用指南 (v1.1)
-===========================================================
-
-【软件定位】
-CrossPointer 是一款参考 macOS 26 设计美学的极简、超低资源占用的
-Windows 屏幕十字辅助线工具，专为数据审阅、代码对齐、设计参考而设计。
-本软件为 100% 纯绿色便携软件：
-- 解压即用，无需安装。
-- 零注册表垃圾，零外部临时文件残留。
-- 产生的所有配置文件（CrossPointer.ini）均保存在本文件夹内。
-
------------------------------------------------------------
-【全新 v1.1 核心特性】
-1. 现代化 GUI 偏好设置窗口：
-   双击右下角系统托盘图标，即可打开可视化设置面板，自由调整：
-   - 间距（Gap）、横竖线粗细（Width）滑块实时预览
-   - 调色盘自定义浅色模式与深色模式专属色彩
-   - 全局快捷键自由组合（支持 Ctrl/Alt/Win/Shift 多选 + 触发键）
-   - 开机自动启动一键开关（纯便携 HKCU 接管，无后台残留）
-   - 8K 与高 DPI 屏幕动态自适应缩放
-
-2. 快捷键说明：
-   - 切换辅助线显示 / 隐藏：默认 Ctrl + Alt + Win + H
-   - 退出程序：默认 Ctrl + Alt + Win + E
-   （可在可视化设置窗口中随意修改）
-
-3. 托盘交互说明：
-   - 单击左键：一键快速显示 / 隐藏辅助线
-   - 双击左键：打开 macOS 26 风格偏好设置窗口
-   - 悬停鼠标：查看当前生效的显隐快捷键
-   - 右键菜单：快捷开关、偏好设置、重载配置、关于与退出
-
------------------------------------------------------------
-【卸载与清理】
-若无需使用，关闭程序并直接删除本文件夹即可，系统无任何隐藏垃圾。
-
-官方开源主页：https://github.com/Crucialmer/CrossPointer
-===========================================================
-"@
-          [System.IO.File]::WriteAllText("$pkgDir\使用说明_QuickStart.txt", $guide, [System.Text.Encoding]::UTF8)
-
-          # Add-Type for optimal zip compression
+          
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory($pkgDir, "CrossPointer.zip")
 
