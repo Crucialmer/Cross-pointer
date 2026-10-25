@@ -1,6 +1,7 @@
 #include "./settings_window.h"
 
 #include <commctrl.h>
+#include <commdlg.h>
 #include <dwmapi.h>
 #include <windowsx.h>
 
