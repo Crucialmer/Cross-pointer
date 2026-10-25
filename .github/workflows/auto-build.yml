@@ -25,5 +25,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Cross-pointer
-          path: .\Cross-pointer.exe
+          name: CrossPointer
+          path: .\CrossPointer.exe
