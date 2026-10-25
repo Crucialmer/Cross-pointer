@@ -5,6 +5,7 @@
 #include <dwmapi.h>
 #include <windowsx.h>
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -245,13 +246,13 @@ void SettingsWindow::CreateControls() {
   auto create_chk = [&](const wchar_t* text, UINT id) {
     return CreateWindowExW(0, L"BUTTON", text,
                            WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,
-                           0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(id),
+                           0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(id)),
                            instance_, nullptr);
   };
   auto create_slider = [&](UINT id, int min_val, int max_val) {
     HWND sl = CreateWindowExW(0, TRACKBAR_CLASSW, L"",
                               WS_CHILD | TBS_AUTOTICKS | WS_TABSTOP,
-                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(id),
+                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(id)),
                               instance_, nullptr);
     SendMessageW(sl, TBM_SETRANGE, TRUE, MAKELPARAM(min_val, max_val));
     return sl;
@@ -263,13 +264,13 @@ void SettingsWindow::CreateControls() {
   auto create_btn = [&](const wchar_t* text, UINT id) {
     return CreateWindowExW(0, L"BUTTON", text,
                            WS_CHILD | BS_PUSHBUTTON | WS_TABSTOP,
-                           0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(id),
+                           0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(id)),
                            instance_, nullptr);
   };
   auto create_combo = [&](UINT id) {
     HWND cb = CreateWindowExW(0, L"COMBOBOX", L"",
                               WS_CHILD | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(id),
+                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(id)),
                               instance_, nullptr);
     for (const auto& item : GetKeyList()) {
       SendMessageW(cb, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(item.first.c_str()));
@@ -285,18 +286,18 @@ void SettingsWindow::CreateControls() {
   slider_v_width_ = create_slider(IDC_SLIDER_V_WIDTH, 1, 20);
   lbl_v_width_val_ = create_lbl(L"2 px");
   preview_crosshair_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_OWNERDRAW,
-                                       0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_PREVIEW_CROSSHAIR), instance_, nullptr);
+                                       0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PREVIEW_CROSSHAIR)), instance_, nullptr);
 
   // Tab 1: 色彩模式
   chk_auto_theme_ = create_chk(L"跟随 Windows 10/11 系统深浅黑白模式实时自动切换 (推荐)", IDC_CHK_AUTO_THEME);
   preview_light_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_OWNERDRAW,
-                                   0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_PREVIEW_LIGHT), instance_, nullptr);
+                                   0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PREVIEW_LIGHT)), instance_, nullptr);
   btn_color_light_ = create_btn(L"选择浅色色彩...", IDC_BTN_COLOR_LIGHT);
   slider_alpha_light_ = create_slider(IDC_SLIDER_ALPHA_LIGHT, 20, 255);
   lbl_alpha_light_val_ = create_lbl(L"200");
 
   preview_dark_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_OWNERDRAW,
-                                  0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_PREVIEW_DARK), instance_, nullptr);
+                                  0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PREVIEW_DARK)), instance_, nullptr);
   btn_color_dark_ = create_btn(L"选择深色色彩...", IDC_BTN_COLOR_DARK);
   slider_alpha_dark_ = create_slider(IDC_SLIDER_ALPHA_DARK, 20, 255);
   lbl_alpha_dark_val_ = create_lbl(L"180");
@@ -324,15 +325,15 @@ void SettingsWindow::CreateControls() {
   // 底部统一动作栏 (始终可见)
   btn_save_ = CreateWindowExW(0, L"BUTTON", L"💾 保存并应用",
                               WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_BTN_SAVE),
+                              0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_BTN_SAVE)),
                               instance_, nullptr);
   btn_defaults_ = CreateWindowExW(0, L"BUTTON", L"🔄 恢复默认",
                                   WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                  0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_BTN_DEFAULTS),
+                                  0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_BTN_DEFAULTS)),
                                   instance_, nullptr);
   btn_close_ = CreateWindowExW(0, L"BUTTON", L"关闭",
                                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                               0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(IDC_BTN_CLOSE),
+                               0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_BTN_CLOSE)),
                                instance_, nullptr);
 }
 
@@ -560,7 +561,7 @@ bool SettingsWindow::SaveValuesFromUI() {
   updated.auto_dpi = Button_GetCheck(chk_auto_dpi_) == BST_CHECKED;
   updated.auto_check_update = Button_GetCheck(chk_auto_check_update_) == BST_CHECKED;
   const bool enable_autostart = Button_GetCheck(chk_autostart_) == BST_CHECKED;
-  autostart::SetAutoStart(enable_autostart);
+  (void)autostart::SetAutoStart(enable_autostart);
 
   // 保存至 INI 文件
   if (!updated.Save(config_path_.c_str())) {
@@ -772,14 +773,14 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         // 水平左臂与右臂
         const int half_gap = gap / 2;
-        RECT rc_hl = {dis->rcItem.left + 10, cy - h_w / 2, cx - half_gap, cy - h_w / 2 + max(1, h_w)};
-        RECT rc_hr = {cx + half_gap, cy - h_w / 2, dis->rcItem.right - 10, cy - h_w / 2 + max(1, h_w)};
+        RECT rc_hl = {dis->rcItem.left + 10, cy - h_w / 2, cx - half_gap, cy - h_w / 2 + std::max(1, h_w)};
+        RECT rc_hr = {cx + half_gap, cy - h_w / 2, dis->rcItem.right - 10, cy - h_w / 2 + std::max(1, h_w)};
         if (rc_hl.right > rc_hl.left) FillRect(dis->hDC, &rc_hl, cross_br);
         if (rc_hr.right > rc_hr.left) FillRect(dis->hDC, &rc_hr, cross_br);
 
         // 垂直上臂与下臂
-        RECT rc_vt = {cx - v_w / 2, dis->rcItem.top + 6, cx - v_w / 2 + max(1, v_w), cy - half_gap};
-        RECT rc_vb = {cx - v_w / 2, cy + half_gap, cx - v_w / 2 + max(1, v_w), dis->rcItem.bottom - 6};
+        RECT rc_vt = {cx - v_w / 2, dis->rcItem.top + 6, cx - v_w / 2 + std::max(1, v_w), cy - half_gap};
+        RECT rc_vb = {cx - v_w / 2, cy + half_gap, cx - v_w / 2 + std::max(1, v_w), dis->rcItem.bottom - 6};
         if (rc_vt.bottom > rc_vt.top) FillRect(dis->hDC, &rc_vt, cross_br);
         if (rc_vb.bottom > rc_vb.top) FillRect(dis->hDC, &rc_vb, cross_br);
 
@@ -820,7 +821,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       RoundRect(hdc, icon_x, icon_y, icon_x + icon_size, icon_y + icon_size, icon_r, icon_r);
 
       // 图标内部激光十字微缩图
-      HPEN cyan_pen = CreatePen(PS_SOLID, max(2, Scale(3, dpi)), RGB(0, 225, 255));
+      HPEN cyan_pen = CreatePen(PS_SOLID, std::max(2, Scale(3, dpi)), RGB(0, 225, 255));
       SelectPen(hdc, cyan_pen);
       const int icx = icon_x + icon_size / 2;
       const int icy = icon_y + icon_size / 2;

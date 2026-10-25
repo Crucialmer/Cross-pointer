@@ -117,7 +117,7 @@ struct AppContext {
     const bool is_light = IsSystemInLightTheme();
     active_config = GetThemedConfig(raw_config, is_light);
     if (crosshair != nullptr) {
-      crosshair->ApplyConfig(active_config);
+      (void)crosshair->ApplyConfig(active_config);
     }
   }
 };

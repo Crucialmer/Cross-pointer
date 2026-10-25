@@ -90,7 +90,7 @@ UpdateResult CheckUpdateSync() noexcept {
       L"https://api.github.com/repos/Crucialmer/CrossPointer/releases/latest";
 
   HINTERNET url = InternetOpenUrlW(
-      net, kUrl, kHeaders, -1,
+      net, kUrl, kHeaders, static_cast<DWORD>(-1),
       INTERNET_FLAG_SECURE | INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE,
       0);
 
