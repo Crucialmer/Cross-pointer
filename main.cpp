@@ -75,7 +75,7 @@ void EnableBestDpiAwareness() noexcept {
 }
 
 std::wstring FormatHotkeyTooltip(const HotkeyConfig& hotkey) {
-  std::wstring tip = L"Cross-pointer (快捷键: ";
+  std::wstring tip = L"CrossPointer (快捷键: ";
   if ((hotkey.mod & MOD_CONTROL) != 0) tip += L"Ctrl+";
   if ((hotkey.mod & MOD_ALT) != 0) tip += L"Alt+";
   if ((hotkey.mod & MOD_WIN) != 0) tip += L"Win+";
@@ -186,14 +186,14 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
         case IDM_TRAY_ABOUT: {
           MessageBoxW(
               window,
-              L"Cross-pointer 1.0 (macOS 26 设计美学版)\n\n"
+              L"CrossPointer 1.0 (macOS 26 设计美学版)\n\n"
               L"• 左键点击托盘：一键切换十字线显隐\n"
-              L"• 双击点击托盘：打开 Cross-pointer.ini 修改快捷键与参数\n"
+              L"• 双击点击托盘：打开 CrossPointer.ini 修改快捷键与参数\n"
               L"• 右键点击托盘：快捷设置与控制菜单\n"
               L"• 自动适配主题：跟随系统黑白深浅模式实时平滑切换色彩\n\n"
               L"纯绿色运行，零外部残留。\n"
               L"Copyright © 2026 Crucialmer",
-              L"关于 Cross-pointer", MB_OK | MB_ICONINFORMATION);
+              L"关于 CrossPointer", MB_OK | MB_ICONINFORMATION);
           return 0;
         }
 
@@ -223,7 +223,7 @@ int Run(HINSTANCE instance) {
     return 1;
   }
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    MessageBoxW(nullptr, L"Cross-pointer 已经在运行中（可在右下角系统托盘找到）。", L"提示",
+    MessageBoxW(nullptr, L"CrossPointer 已经在运行中（可在右下角系统托盘找到）。", L"提示",
                 MB_OK | MB_ICONINFORMATION);
     return 0;
   }
