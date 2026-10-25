@@ -4,25 +4,26 @@
 
 inline constexpr char kDefaultIni[] = R"([Crosshair]
 # The gap (empty space) around the mouse cursor; valid range: 0-400
-Gap = 20
+# 16px provides a balanced, elegant spacing consistent with modern macOS design aesthetics.
+Gap = 16
 
 [Horizontal]
 # Valid range: 1-200
 Width = 2
-# R, G, B, Alpha: 0-255
-R = 255
-G = 0
-B = 0
-Alpha = 255
+# Apple System Azure Blue (#007AFF) with soft 70% translucency (Alpha = 180)
+# Clean, high-clarity, non-intrusive on dark and light backgrounds.
+R = 0
+G = 122
+B = 255
+Alpha = 180
 
 [Vertical]
 # Valid range: 1-200
 Width = 2
-# R, G, B, Alpha: 0-255
-R = 255
-G = 0
-B = 0
-Alpha = 255
+R = 0
+G = 122
+B = 255
+Alpha = 180
 
 [Hide_Show_Hotkey]
 # Supported modifiers: Ctrl, Alt, Win, Shift (comma-separated)
