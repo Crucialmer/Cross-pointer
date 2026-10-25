@@ -291,6 +291,10 @@ int Run(HINSTANCE instance) {
                 MB_OK | MB_ICONERROR);
     return 1;
   }
+  // 检查启动时是否默认显示十字线，若用户配置为隐藏则启动后静默常驻托盘
+  if (!raw_config.show_on_startup) {
+    crosshair.SetVisible(false);
+  }
   if (!HotkeyManager::Register(raw_config.hotkey_h_s, raw_config.hotkey_exit)) {
     MessageBoxW(nullptr, L"注册全局热键失败；热键可能已被其他程序占用。",
                 L"错误", MB_OK | MB_ICONERROR);

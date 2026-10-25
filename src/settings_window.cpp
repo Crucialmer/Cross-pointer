@@ -58,6 +58,7 @@ constexpr UINT IDC_COMBO_EXIT_VK = 3044;
 constexpr UINT IDC_BTN_SYNC_HOTKEY = 3045;
 
 // Tab 3: 系统与更新
+constexpr UINT IDC_CHK_SHOW_ON_STARTUP = 3049;
 constexpr UINT IDC_CHK_AUTO_DPI = 3050;
 constexpr UINT IDC_CHK_AUTOSTART = 3051;
 constexpr UINT IDC_CHK_AUTO_UPDATE = 3052;
@@ -317,6 +318,7 @@ void SettingsWindow::CreateControls() {
   btn_sync_hotkey_ = create_btn(L"⚡ 将退出热键设为与显隐相同 (单键显隐+退出)", IDC_BTN_SYNC_HOTKEY);
 
   // Tab 3: 系统与更新
+  chk_show_on_startup_ = create_chk(L"启动软件时默认显示十字辅助线 (Show on Startup)", IDC_CHK_SHOW_ON_STARTUP);
   chk_auto_dpi_ = create_chk(L"适配 4K / 8K 分辨率与高 DPI 屏幕 (Auto-DPI 微米级缩放)", IDC_CHK_AUTO_DPI);
   chk_autostart_ = create_chk(L"开机自动启动 CrossPointer (当前用户 HKCU 独立便携接管)", IDC_CHK_AUTOSTART);
   chk_auto_check_update_ = create_chk(L"启动时自动静默检查新版本更新 (Silent Update Check)", IDC_CHK_AUTO_UPDATE);
@@ -354,7 +356,7 @@ void SettingsWindow::LayoutControls(int dpi) {
     if (h != nullptr) SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(f), TRUE);
   };
 
-  for (HWND h : {chk_auto_theme_, chk_auto_dpi_, chk_autostart_,
+  for (HWND h : {chk_auto_theme_, chk_show_on_startup_, chk_auto_dpi_, chk_autostart_,
                  chk_auto_check_update_, btn_check_update_,
                  chk_toggle_ctrl_, chk_toggle_alt_, chk_toggle_win_, chk_toggle_shift_,
                  chk_exit_ctrl_, chk_exit_alt_, chk_exit_win_, chk_exit_shift_,
@@ -416,10 +418,11 @@ void SettingsWindow::LayoutControls(int dpi) {
   SetWindowPos(btn_sync_hotkey_, nullptr, inner_x + Scale(220, dpi), Scale(292, dpi), Scale(288, dpi), Scale(28, dpi), SWP_NOZORDER);
 
   // Tab 3: 系统与更新
-  SetWindowPos(chk_auto_dpi_, nullptr, inner_x, Scale(194, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_autostart_, nullptr, inner_x, Scale(258, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_auto_check_update_, nullptr, inner_x, Scale(322, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_check_update_, nullptr, inner_x, Scale(390, dpi), Scale(160, dpi), Scale(34, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_show_on_startup_, nullptr, inner_x, Scale(186, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_dpi_, nullptr, inner_x, Scale(242, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_autostart_, nullptr, inner_x, Scale(298, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_check_update_, nullptr, inner_x, Scale(354, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_check_update_, nullptr, inner_x, Scale(414, dpi), Scale(160, dpi), Scale(34, dpi), SWP_NOZORDER);
 
   // 底部统一动作栏 (Y = 488px)
   const int btn_y = Scale(488, dpi);
@@ -450,7 +453,7 @@ void SettingsWindow::UpdateTabVisibility() {
               btn_sync_hotkey_},
              current_tab_ == 2);
 
-  show_ctrls({chk_auto_dpi_, chk_autostart_, chk_auto_check_update_,
+  show_ctrls({chk_show_on_startup_, chk_auto_dpi_, chk_autostart_, chk_auto_check_update_,
               btn_check_update_},
              current_tab_ == 3);
 }
@@ -509,6 +512,7 @@ void SettingsWindow::LoadValuesToUI() {
   }
 
   // System
+  Button_SetCheck(chk_show_on_startup_, config_.show_on_startup ? BST_CHECKED : BST_UNCHECKED);
   Button_SetCheck(chk_auto_dpi_, config_.auto_dpi ? BST_CHECKED : BST_UNCHECKED);
   Button_SetCheck(chk_autostart_, autostart::IsAutoStartEnabled() ? BST_CHECKED : BST_UNCHECKED);
   Button_SetCheck(chk_auto_check_update_, config_.auto_check_update ? BST_CHECKED : BST_UNCHECKED);
@@ -558,6 +562,7 @@ bool SettingsWindow::SaveValuesFromUI() {
   updated.ClampAll();
 
   // System
+  updated.show_on_startup = Button_GetCheck(chk_show_on_startup_) == BST_CHECKED;
   updated.auto_dpi = Button_GetCheck(chk_auto_dpi_) == BST_CHECKED;
   updated.auto_check_update = Button_GetCheck(chk_auto_check_update_) == BST_CHECKED;
   const bool enable_autostart = Button_GetCheck(chk_autostart_) == BST_CHECKED;
@@ -1101,39 +1106,45 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         // TAB 3: 系统与更新
         SelectFont(hdc, font_card_title_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(18, dpi), L"系统整合、高 DPI 适配与在线更新", 16);
+        TextOutW(hdc, inner_x, card_y + Scale(16, dpi), L"系统整合、启动偏好与在线更新", 16);
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(40, dpi), L"100% 纯绿色便携软件设计，零注册表垃圾残留，零外部临时文件", 28);
+        TextOutW(hdc, inner_x, card_y + Scale(36, dpi), L"100% 纯绿色便携软件设计，零注册表垃圾残留，零外部临时文件", 28);
 
-        // Row 1: High DPI & 8K
+        // Row 1: Show on Startup
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(92, dpi),
+        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(80, dpi),
+                 L"勾选时打开软件即刻显示十字线；取消勾选则启动后静默常驻托盘，需按热键呼出", 37);
+        MoveToEx(hdc, inner_x, card_y + Scale(108, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(108, dpi));
+
+        // Row 2: High DPI & 8K
+        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(136, dpi),
                  L"内置 PerMonitorV2 顶级感知，光标跨屏时物理微米级动态缩放，彻底告别过细线条", 39);
-        MoveToEx(hdc, inner_x, card_y + Scale(122, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(122, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(164, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(164, dpi));
 
-        // Row 2: Autostart
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(156, dpi),
+        // Row 3: Autostart
+        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(192, dpi),
                  L"仅在当前用户注册表独立启动，纯便携绿色生效，取消勾选即刻彻底清除", 32);
-        MoveToEx(hdc, inner_x, card_y + Scale(186, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(186, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(220, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(220, dpi));
 
-        // Row 3: Update Check
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(220, dpi),
+        // Row 4: Update Check
+        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(248, dpi),
                  L"后台异步轻量查询 GitHub Releases，发现新版本时在托盘温和提示", 31);
-        MoveToEx(hdc, inner_x, card_y + Scale(250, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(250, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(276, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(276, dpi));
 
-        // Row 4: Manual Check Button & Info
+        // Row 5: Manual Check Button & Info
         SelectFont(hdc, font_bold_);
         SetTextColor(hdc, RGB(52, 199, 89));
-        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(268, dpi),
+        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(294, dpi),
                  L"当前版本: CrossPointer v1.3 • 已是最新正式版", 26);
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(288, dpi),
+        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(314, dpi),
                  L"官方开源仓库: https://github.com/Crucialmer/CrossPointer", 32);
       }
 

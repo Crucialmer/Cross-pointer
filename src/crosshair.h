@@ -17,6 +17,7 @@ class CrosshairWindow {
 
   [[nodiscard]] bool Create();
   void ToggleVisible();
+  void SetVisible(bool visible) noexcept;
   [[nodiscard]] bool IsVisible() const noexcept { return visible_; }
   [[nodiscard]] bool ApplyConfig(const Config& config);
 

@@ -222,7 +222,12 @@ bool CrosshairWindow::ApplyConfig(const Config& config) {
 }
 
 void CrosshairWindow::ToggleVisible() {
-  visible_ = !visible_;
+  SetVisible(!visible_);
+}
+
+void CrosshairWindow::SetVisible(bool visible) noexcept {
+  if (visible_ == visible) return;
+  visible_ = visible;
   last_cursor_pos_ = {LONG_MIN, LONG_MIN};
   if (visible_) {
     UpdatePosition();

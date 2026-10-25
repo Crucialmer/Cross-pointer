@@ -90,6 +90,7 @@ class SettingsWindow {
   HWND btn_sync_hotkey_ = nullptr;
 
   // Tab 3: 系统与更新
+  HWND chk_show_on_startup_ = nullptr;
   HWND chk_auto_dpi_ = nullptr;
   HWND chk_autostart_ = nullptr;
   HWND chk_auto_check_update_ = nullptr;
