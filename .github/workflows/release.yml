@@ -3,6 +3,8 @@ name: Release
 on:
   workflow_dispatch:
   push:
+    branches:
+      - master
     tags:
       - "v*"
 
@@ -35,6 +37,9 @@ jobs:
           New-Item -ItemType Directory -Path $pkgDir -Force | Out-Null
           Copy-Item "CrossPointer.exe" -Destination "$pkgDir\CrossPointer.exe"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
+          if (Test-Path "QuickStart_Guide.txt") {
+            Copy-Item "QuickStart_Guide.txt" -Destination "$pkgDir\QuickStart_Guide.txt"
+          }
           
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory($pkgDir, "CrossPointer.zip")

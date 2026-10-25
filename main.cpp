@@ -77,24 +77,31 @@ void EnableBestDpiAwareness() noexcept {
   SetProcessDPIAware();
 }
 
-std::wstring FormatHotkeyTooltip(const HotkeyConfig& hotkey) {
-  std::wstring tip = L"CrossPointer (快捷键: ";
-  if ((hotkey.mod & MOD_CONTROL) != 0) tip += L"Ctrl+";
-  if ((hotkey.mod & MOD_ALT) != 0) tip += L"Alt+";
-  if ((hotkey.mod & MOD_WIN) != 0) tip += L"Win+";
-  if ((hotkey.mod & MOD_SHIFT) != 0) tip += L"Shift+";
+std::wstring FormatHotkeyTooltip(const HotkeyConfig& toggle,
+                                 const HotkeyConfig& exit) {
+  auto format_single = [](const HotkeyConfig& hotkey) {
+    std::wstring s;
+    if ((hotkey.mod & MOD_CONTROL) != 0) s += L"Ctrl+";
+    if ((hotkey.mod & MOD_ALT) != 0) s += L"Alt+";
+    if ((hotkey.mod & MOD_WIN) != 0) s += L"Win+";
+    if ((hotkey.mod & MOD_SHIFT) != 0) s += L"Shift+";
 
-  if (hotkey.vk >= L'A' && hotkey.vk <= L'Z') {
-    tip += static_cast<wchar_t>(hotkey.vk);
-  } else if (hotkey.vk >= L'0' && hotkey.vk <= L'9') {
-    tip += static_cast<wchar_t>(hotkey.vk);
-  } else if (hotkey.vk >= VK_F1 && hotkey.vk <= VK_F24) {
-    tip += L"F" + std::to_wstring(hotkey.vk - VK_F1 + 1);
-  } else {
-    tip += Config::VKToString(hotkey.vk);
+    if (hotkey.vk >= L'A' && hotkey.vk <= L'Z') {
+      s += static_cast<wchar_t>(hotkey.vk);
+    } else if (hotkey.vk >= L'0' && hotkey.vk <= L'9') {
+      s += static_cast<wchar_t>(hotkey.vk);
+    } else if (hotkey.vk >= VK_F1 && hotkey.vk <= VK_F24) {
+      s += L"F" + std::to_wstring(hotkey.vk - VK_F1 + 1);
+    } else {
+      s += Config::VKToString(hotkey.vk);
+    }
+    return s;
+  };
+
+  if (toggle.mod == exit.mod && toggle.vk == exit.vk) {
+    return L"CrossPointer 🎯 (单键复用: " + format_single(toggle) + L" 显示/退出)";
   }
-  tip += L")";
-  return tip;
+  return L"CrossPointer 🎯 (显隐: " + format_single(toggle) + L", 退出: " + format_single(exit) + L")";
 }
 
 struct AppContext {
@@ -173,7 +180,8 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
                 ctx->raw_config = new_config;
                 ctx->RefreshActiveTheme();
                 ctx->tray.UpdateTooltip(
-                    FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s));
+                    FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s,
+                                        ctx->raw_config.hotkey_exit));
                 return true;
               });
           return 0;
@@ -205,7 +213,9 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
           }
           ctx->raw_config = updated;
           ctx->RefreshActiveTheme();
-          ctx->tray.UpdateTooltip(FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s));
+          ctx->tray.UpdateTooltip(
+              FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s,
+                                  ctx->raw_config.hotkey_exit));
           MessageBoxW(window, L"配置已成功重新载入并生效！", L"提示",
                       MB_OK | MB_ICONINFORMATION);
           return 0;
@@ -214,14 +224,14 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
         case IDM_TRAY_ABOUT: {
           MessageBoxW(
               window,
-              L"CrossPointer 1.2 (macOS 26 设计美学、8K 高 DPI 适配与在线更新版)\n\n"
-              L"• 左键点击托盘：一键切换十字线显隐\n"
-              L"• 双击点击托盘：打开现代化 macOS 卡片风格偏好设置窗口\n"
-              L"• 右键点击托盘：功能菜单、在线检查更新与快捷控制\n"
-              L"• 8K 与高 DPI 适配：物理微米级动态高刷缩放\n"
-              L"• 软件更新选项：一键检测并提示云端新版本\n"
-              L"• 开机自启动：纯便携免安装自启动管理\n"
-              L"• 跟随系统主题：毫秒级响应深浅色自适应切换\n\n"
+              L"CrossPointer 1.3 (macOS 26 极简设计、单键显隐退出复用与 8K 适配版)\n\n"
+              L"• 单键复用：显隐与退出可设为同一热键，未显示时显示，显示时直接退出\n"
+              L"• 按键顺序无关：Ctrl/Alt/Win/Shift 任意顺序按下均可毫秒级触发\n"
+              L"• macOS 26 偏好设置：分栏胶囊 Tab 切换，消除压缩，极致宽敞美观\n"
+              L"• 8K 与高 DPI 适配：物理微米级动态自适应缩放，线宽永不失真\n"
+              L"• 极简加粗激光十字图标：中心圆形镂空光孔，极致辨识度\n"
+              L"• 在线版本更新检查：一键异步检查 GitHub Releases\n"
+              L"• 绿色开机自启动：独立 HKCU 便携接管，零系统垃圾\n\n"
               L"100% 纯绿色运行，零系统残留。\n"
               L"Copyright © 2026 Crucialmer",
               L"关于 CrossPointer", MB_OK | MB_ICONINFORMATION);
@@ -309,7 +319,9 @@ int Run(HINSTANCE instance) {
   }
 
   context.tray.Initialize(instance, controller);
-  context.tray.UpdateTooltip(FormatHotkeyTooltip(context.raw_config.hotkey_h_s));
+  context.tray.UpdateTooltip(
+      FormatHotkeyTooltip(context.raw_config.hotkey_h_s,
+                          context.raw_config.hotkey_exit));
 
   if (context.raw_config.auto_check_update) {
     updater::CheckUpdateAsync(controller, /*silent_if_latest=*/true);
@@ -324,6 +336,35 @@ int Run(HINSTANCE instance) {
         continue;
       }
       if (message.wParam == kToggleHotkeyId) {
+        const bool is_same_hotkey =
+            (context.raw_config.hotkey_h_s.mod == context.raw_config.hotkey_exit.mod &&
+             context.raw_config.hotkey_h_s.vk == context.raw_config.hotkey_exit.vk);
+
+        // 当显隐与退出设为同一全局快捷键时：
+        // 1. 若当前十字线正在显示 -> 触发安全退出程序
+        // 2. 若当前十字线处于隐藏 -> 触发热重载并显示十字线
+        if (is_same_hotkey) {
+          if (crosshair.IsVisible()) {
+            PostQuitMessage(0);
+            continue;
+          }
+
+          // 重新显示时热重载配置
+          Config updated;
+          if (updated.Load(config_path.c_str())) {
+            if (HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
+              context.raw_config = updated;
+              context.RefreshActiveTheme();
+              context.tray.UpdateTooltip(
+                  FormatHotkeyTooltip(context.raw_config.hotkey_h_s,
+                                      context.raw_config.hotkey_exit));
+            }
+          }
+          crosshair.ToggleVisible();
+          continue;
+        }
+
+        // 当显隐与退出为不同热键时：按显隐热键切换显隐状态
         if (crosshair.IsVisible()) {
           crosshair.ToggleVisible();
           continue;
@@ -338,7 +379,9 @@ int Run(HINSTANCE instance) {
         if (HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
           context.raw_config = updated;
           context.RefreshActiveTheme();
-          context.tray.UpdateTooltip(FormatHotkeyTooltip(context.raw_config.hotkey_h_s));
+          context.tray.UpdateTooltip(
+              FormatHotkeyTooltip(context.raw_config.hotkey_h_s,
+                                  context.raw_config.hotkey_exit));
         }
         crosshair.ToggleVisible();
         continue;

@@ -195,11 +195,7 @@ bool Config::Load(const wchar_t* filename) {
   loaded.hotkey_exit.mod = ParseMod(exit_mod->c_str(), parsed_exit_key.second);
   loaded.ClampAll();
 
-  if (loaded.hotkey_h_s.mod == loaded.hotkey_exit.mod &&
-      loaded.hotkey_h_s.vk == loaded.hotkey_exit.vk) {
-    return false;
-  }
-
+  // 支持同一快捷键复用兼具显示与退出，不再拒绝相同热键
   *this = loaded;
   return true;
 }
@@ -351,22 +347,29 @@ unsigned int Config::ParseMod(const wchar_t* text, bool function_key) {
   std::wstring input = TrimAndLower(text != nullptr ? text : L"");
   if (input.empty()) return function_key ? 0U : kDefault;
 
+  // 同时支持 '+' 与 ',' 作为修饰键分隔符，任何按键书写顺序均可等价解析
+  for (wchar_t& ch : input) {
+    if (ch == L'+') ch = L',';
+  }
+
   unsigned int modifiers = 0;
   size_t start = 0;
   while (start <= input.size()) {
     const size_t separator = input.find(L',', start);
     const size_t end = separator == std::wstring::npos ? input.size() : separator;
     const std::wstring token = TrimAndLower(input.substr(start, end - start));
-    if (token == L"ctrl" || token == L"control") {
-      modifiers |= MOD_CONTROL;
-    } else if (token == L"alt") {
-      modifiers |= MOD_ALT;
-    } else if (token == L"win" || token == L"windows") {
-      modifiers |= MOD_WIN;
-    } else if (token == L"shift") {
-      modifiers |= MOD_SHIFT;
-    } else {
-      return kDefault;
+    if (!token.empty()) {
+      if (token == L"ctrl" || token == L"control") {
+        modifiers |= MOD_CONTROL;
+      } else if (token == L"alt") {
+        modifiers |= MOD_ALT;
+      } else if (token == L"win" || token == L"windows") {
+        modifiers |= MOD_WIN;
+      } else if (token == L"shift") {
+        modifiers |= MOD_SHIFT;
+      } else {
+        return kDefault;
+      }
     }
     if (separator == std::wstring::npos) break;
     start = separator + 1;

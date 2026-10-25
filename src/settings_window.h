@@ -33,7 +33,8 @@ class SettingsWindow {
   void UpdateThemeStyles();
   void LoadValuesToUI();
   bool SaveValuesFromUI();
-  void UpdateColorPreview(HWND hwnd_preview, const LineColor& color);
+  void SwitchTab(int new_tab);
+  void UpdateTabVisibility();
 
   HINSTANCE instance_ = nullptr;
   HWND parent_ = nullptr;
@@ -43,61 +44,70 @@ class SettingsWindow {
   ApplyCallback on_apply_;
 
   HFONT font_title_ = nullptr;
+  HFONT font_card_title_ = nullptr;
   HFONT font_bold_ = nullptr;
   HFONT font_regular_ = nullptr;
   HFONT font_small_ = nullptr;
 
-  // 控件句柄
-  HWND chk_auto_theme_ = nullptr;
-  HWND chk_auto_dpi_ = nullptr;
-  HWND chk_autostart_ = nullptr;
-  HWND chk_auto_check_update_ = nullptr;
-  HWND btn_check_update_ = nullptr;
+  int current_tab_ = 0;  // 0: 外观尺寸, 1: 色彩模式, 2: 全局快捷键, 3: 系统与更新
 
+  // Tab 0: 外观尺寸
   HWND slider_gap_ = nullptr;
   HWND lbl_gap_val_ = nullptr;
   HWND slider_h_width_ = nullptr;
   HWND lbl_h_width_val_ = nullptr;
   HWND slider_v_width_ = nullptr;
   HWND lbl_v_width_val_ = nullptr;
+  HWND preview_crosshair_ = nullptr;
 
-  // 浅色色彩
+  // Tab 1: 色彩与模式
+  HWND chk_auto_theme_ = nullptr;
   HWND preview_light_ = nullptr;
   HWND btn_color_light_ = nullptr;
   HWND slider_alpha_light_ = nullptr;
   HWND lbl_alpha_light_val_ = nullptr;
   LineColor temp_light_color_;
 
-  // 深色色彩
   HWND preview_dark_ = nullptr;
   HWND btn_color_dark_ = nullptr;
   HWND slider_alpha_dark_ = nullptr;
   HWND lbl_alpha_dark_val_ = nullptr;
   LineColor temp_dark_color_;
 
-  // 快捷键 显隐
+  // Tab 2: 快捷键 (支持单键复用与任意按键顺序)
   HWND chk_toggle_ctrl_ = nullptr;
   HWND chk_toggle_alt_ = nullptr;
   HWND chk_toggle_win_ = nullptr;
   HWND chk_toggle_shift_ = nullptr;
   HWND combo_toggle_vk_ = nullptr;
 
-  // 快捷键 退出
   HWND chk_exit_ctrl_ = nullptr;
   HWND chk_exit_alt_ = nullptr;
   HWND chk_exit_win_ = nullptr;
   HWND chk_exit_shift_ = nullptr;
   HWND combo_exit_vk_ = nullptr;
 
-  // 底部按钮
+  HWND btn_sync_hotkey_ = nullptr;
+
+  // Tab 3: 系统与更新
+  HWND chk_auto_dpi_ = nullptr;
+  HWND chk_autostart_ = nullptr;
+  HWND chk_auto_check_update_ = nullptr;
+  HWND btn_check_update_ = nullptr;
+
+  // 底部统一动作栏
   HWND btn_save_ = nullptr;
   HWND btn_defaults_ = nullptr;
   HWND btn_close_ = nullptr;
 
   HBRUSH br_bg_ = nullptr;
   HBRUSH br_card_ = nullptr;
+  HBRUSH br_seg_bg_ = nullptr;
+  HBRUSH br_tab_active_ = nullptr;
   COLORREF cr_text_ = RGB(0, 0, 0);
   COLORREF cr_secondary_ = RGB(120, 120, 120);
   COLORREF cr_card_border_ = RGB(220, 220, 225);
+  COLORREF cr_divider_ = RGB(230, 230, 235);
+  COLORREF cr_accent_ = RGB(0, 122, 255);
   bool is_dark_mode_ = false;
 };
