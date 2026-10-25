@@ -34,9 +34,9 @@ jobs:
           name: Cross-pointer
           path: .\Cross-pointer.exe
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          gh release create v1.0 Cross-pointer.exe --title "Cross-pointer 1.0" --notes "### Cross-pointer 1.0 正式版`n`n- 纯绿色单文件：Cross-pointer.exe`n- 零外溢残留：所有配置保存在程序同目录下，绝不向 AppData 或注册表写入任何文件。`n- 原生 C++20 + Direct2D：硬件加速，静态编译（/MT），免安装直接运行。"
+          gh release create v1.0 Cross-pointer.exe --title "Cross-pointer 1.0" --clobber --notes "### Cross-pointer 1.0 正式版 (macOS 26 设计美学版)`n`n- **全新 macOS 26 设计美学图标**：黑曜石磨砂玻璃 Squircle 圆角底座，内嵌高精度蔚蓝荧光十字标。`n- **极简蔚蓝半透明十字线**：默认采用 Apple Azure Blue (#007AFF) 搭配 70% 柔和透明度，清爽克制、低侵入感。`n- **1ms 硬件级高刷调度**：引入 \`timeBeginPeriod(1)\`，突破 Windows 默认 15.6ms 时钟限制，在 120Hz/144Hz 显示器上提供如 Apple ProMotion 般丝滑的跟随体验。`n- **纯绿色单文件**：纯 C++20 + Direct2D 原生静态编译 (/MT)，配置文件严格存放在同目录，不产生任何外部文件残留。"
