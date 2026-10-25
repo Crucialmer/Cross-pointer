@@ -27,6 +27,7 @@ add_executable(
   src/autostart.cpp
   src/settings_window.cpp
   res/resource.rc
+  res/CrossPointer.manifest
 )
 
 # Software output name strictly matches project name
