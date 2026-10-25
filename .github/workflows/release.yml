@@ -33,7 +33,8 @@ jobs:
       - name: Create Packaged Folder and ZIP
         shell: pwsh
         run: |
-          $pkgDir = "CrossPointer"
+          $stagingDir = "staging"
+          $pkgDir = Join-Path $stagingDir "CrossPointer"
           New-Item -ItemType Directory -Path $pkgDir -Force | Out-Null
           Copy-Item "CrossPointer.exe" -Destination "$pkgDir\CrossPointer.exe"
           Copy-Item "README.md" -Destination "$pkgDir\README.md"
@@ -42,7 +43,13 @@ jobs:
           }
           
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::CreateFromDirectory($pkgDir, "CrossPointer.zip")
+          [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            $stagingDir,
+            "CrossPointer.zip",
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false,
+            [System.Text.Encoding]::UTF8
+          )
 
       - name: Upload Artifact Zip
         uses: actions/upload-artifact@v4
