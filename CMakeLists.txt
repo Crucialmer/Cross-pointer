@@ -18,7 +18,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
 
 add_executable(
   Cross-pointer WIN32 main.cpp src/config_file_util.cpp src/crosshair.cpp
-  src/config.cpp src/hotkey.cpp res/resource.rc)
+  src/config.cpp src/hotkey.cpp src/tray.cpp res/resource.rc)
 
 # Software output name strictly matches project name
 set_target_properties(Cross-pointer PROPERTIES
@@ -43,5 +43,5 @@ target_link_options(Cross-pointer PRIVATE
   $<$<CONFIG:Release>:/LTCG /OPT:REF /OPT:ICF>
 )
 
-# Link Windows system libraries (winmm added for 1ms precision timer)
-target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1 winmm)
+# Link Windows system libraries
+target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1 winmm shell32)
