@@ -43,7 +43,7 @@ struct Config {
   bool auto_theme = true;
   bool auto_dpi = true;  // 适配高 DPI / 4K / 8K 分辨率按比例缩放
   bool auto_check_update = true;  // 启动时静默检查是否有新版本更新
-  bool show_on_startup = true;   // 启动软件时是否默认显示十字线 (true = 显示, false = 隐藏)
+  bool show_on_startup = false;   // 启动软件时是否默认显示十字线 (默认 false: 静默常驻托盘需热键呼出)
 
   LineColor light_theme{ColorChannel(0), ColorChannel(102), ColorChannel(230),
                         ColorChannel(200)};

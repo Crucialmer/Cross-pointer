@@ -153,10 +153,10 @@ bool Config::Load(const wchar_t* filename) {
       ReadUnsigned(L"Update", L"AutoCheckUpdate", filename, 0, 1);
   loaded.auto_check_update = auto_update_val.value_or(1) != 0;
 
-  // 启动时是否默认显示十字线配置项 (1 = 默认显示, 0 = 启动后静默常驻托盘)
+  // 启动时是否默认显示十字线配置项 (1 = 启动即显示, 0 = 启动后静默常驻托盘，默认为 0)
   const auto show_startup_val =
       ReadUnsigned(L"General", L"ShowOnStartup", filename, 0, 1);
-  loaded.show_on_startup = show_startup_val.value_or(1) != 0;
+  loaded.show_on_startup = show_startup_val.value_or(0) != 0;
 
   // 浅色主题预设 (可选)
   const auto light_r = ReadUnsigned(L"Light_Mode", L"R", filename, 0, 255);
@@ -210,7 +210,7 @@ bool Config::Save(const wchar_t* filename) const {
 
   std::wostringstream ss;
   ss << L"[General]\n";
-  ss << L"# 软件启动时是否立即显示十字辅助线 (1 = 默认显示, 0 = 启动后静默常驻托盘，需按热键呼出)\n";
+  ss << L"# 软件启动时是否立即显示十字辅助线 (1 = 启动即显示, 0 = 默认不显示/静默常驻托盘，需按热键呼出)\n";
   ss << L"ShowOnStartup = " << (show_on_startup ? 1 : 0) << L"\n\n";
 
   ss << L"[Theme]\n";

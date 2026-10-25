@@ -3,8 +3,8 @@
 #include <string>
 
 inline constexpr char kDefaultIni[] = R"([General]
-# 软件启动时是否立即显示十字辅助线 (1 = 默认显示, 0 = 启动后静默常驻托盘，需按热键呼出)
-ShowOnStartup = 1
+# 软件启动时是否立即显示十字辅助线 (1 = 启动即显示, 0 = 默认不显示/静默常驻托盘，需按热键呼出)
+ShowOnStartup = 0
 
 [Theme]
 # 1 = 跟随系统自动切换黑白模式 (Auto follow Windows Light/Dark theme)

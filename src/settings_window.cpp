@@ -318,7 +318,7 @@ void SettingsWindow::CreateControls() {
   btn_sync_hotkey_ = create_btn(L"⚡ 将退出热键设为与显隐相同 (单键显隐+退出)", IDC_BTN_SYNC_HOTKEY);
 
   // Tab 3: 系统与更新
-  chk_show_on_startup_ = create_chk(L"启动软件时默认显示十字辅助线 (Show on Startup)", IDC_CHK_SHOW_ON_STARTUP);
+  chk_show_on_startup_ = create_chk(L"启动软件时显示十字辅助线 (Show on Startup)", IDC_CHK_SHOW_ON_STARTUP);
   chk_auto_dpi_ = create_chk(L"适配 4K / 8K 分辨率与高 DPI 屏幕 (Auto-DPI 微米级缩放)", IDC_CHK_AUTO_DPI);
   chk_autostart_ = create_chk(L"开机自动启动 CrossPointer (当前用户 HKCU 独立便携接管)", IDC_CHK_AUTOSTART);
   chk_auto_check_update_ = create_chk(L"启动时自动静默检查新版本更新 (Silent Update Check)", IDC_CHK_AUTO_UPDATE);
@@ -1115,7 +1115,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
         TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(80, dpi),
-                 L"勾选时打开软件即刻显示十字线；取消勾选则启动后静默常驻托盘，需按热键呼出", 37);
+                 L"默认不勾选：启动后静默常驻托盘，按热键呼出；勾选则打开软件即刻显示", 33);
         MoveToEx(hdc, inner_x, card_y + Scale(108, dpi), nullptr);
         LineTo(hdc, inner_x + inner_w, card_y + Scale(108, dpi));
 
