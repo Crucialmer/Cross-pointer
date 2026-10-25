@@ -66,6 +66,7 @@ void TrayManager::ShowContextMenu(HWND window, POINT pt,
   AppendMenuW(menu, MF_STRING, IDM_TRAY_TOGGLE, toggle_text);
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, IDM_TRAY_SETTINGS, L"⚙️ 偏好设置... (&P)");
+  AppendMenuW(menu, MF_STRING, IDM_TRAY_CHECK_UPDATE, L"🔄 检查更新... (&U)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_RELOAD, L"🔄 重新载入配置 (&R)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_OPEN_CONFIG,
               L"📝 高级：打开配置文件 (&O)");

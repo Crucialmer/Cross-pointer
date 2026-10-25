@@ -11,6 +11,7 @@ constexpr UINT IDM_TRAY_RELOAD = 2003;
 constexpr UINT IDM_TRAY_ABOUT = 2004;
 constexpr UINT IDM_TRAY_EXIT = 2005;
 constexpr UINT IDM_TRAY_SETTINGS = 2006;
+constexpr UINT IDM_TRAY_CHECK_UPDATE = 2007;
 
 class TrayManager {
  public:

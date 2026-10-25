@@ -42,6 +42,7 @@ struct Config {
   unsigned int gap = 16;
   bool auto_theme = true;
   bool auto_dpi = true;  // 适配高 DPI / 4K / 8K 分辨率按比例缩放
+  bool auto_check_update = true;  // 启动时静默检查是否有新版本更新
 
   LineColor light_theme{ColorChannel(0), ColorChannel(102), ColorChannel(230),
                         ColorChannel(200)};

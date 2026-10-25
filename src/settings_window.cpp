@@ -10,6 +10,7 @@
 
 #include "./autostart.h"
 #include "./config_file_util.h"
+#include "./updater.h"
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -27,6 +28,8 @@ constexpr wchar_t kSettingsClassName[] = L"CrossPointerSettingsClass";
 constexpr UINT IDC_CHK_AUTO_THEME = 3001;
 constexpr UINT IDC_CHK_AUTO_DPI = 3002;
 constexpr UINT IDC_CHK_AUTOSTART = 3003;
+constexpr UINT IDC_CHK_AUTO_UPDATE = 3004;
+constexpr UINT IDC_BTN_CHECK_UPDATE = 3005;
 
 constexpr UINT IDC_SLIDER_GAP = 3010;
 constexpr UINT IDC_SLIDER_H_WIDTH = 3011;
@@ -288,6 +291,8 @@ void SettingsWindow::CreateControls() {
   // 卡片 4: 系统
   chk_auto_dpi_ = create_chk(L"适配 4K / 8K 分辨率高 DPI 屏幕（物理微米级动态缩放）", IDC_CHK_AUTO_DPI);
   chk_autostart_ = create_chk(L"开机自动启动 CrossPointer（纯便携自启动，零系统污染）", IDC_CHK_AUTOSTART);
+  chk_auto_check_update_ = create_chk(L"启动时自动静默检查新版本更新", IDC_CHK_AUTO_UPDATE);
+  btn_check_update_ = create_btn(L"🔍 立即检查更新...", IDC_BTN_CHECK_UPDATE);
 
   // 底部按钮
   btn_save_ = create_btn(L"💾 保存并应用", IDC_BTN_SAVE);
@@ -312,6 +317,7 @@ void SettingsWindow::LayoutControls(int dpi) {
 
   // 设置所有控件字体
   for (HWND h : {chk_auto_theme_, chk_auto_dpi_, chk_autostart_,
+                 chk_auto_check_update_, btn_check_update_,
                  chk_toggle_ctrl_, chk_toggle_alt_, chk_toggle_win_, chk_toggle_shift_,
                  chk_exit_ctrl_, chk_exit_alt_, chk_exit_win_, chk_exit_shift_,
                  combo_toggle_vk_, combo_exit_vk_,
@@ -373,10 +379,12 @@ void SettingsWindow::LayoutControls(int dpi) {
 
   // Card 4 系统项
   SetWindowPos(chk_auto_dpi_, nullptr, c_inner_x, Scale(418, dpi), card_w - Scale(28, dpi), Scale(22, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_autostart_, nullptr, c_inner_x, Scale(448, dpi), card_w - Scale(28, dpi), Scale(22, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_autostart_, nullptr, c_inner_x, Scale(446, dpi), card_w - Scale(28, dpi), Scale(22, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_check_update_, nullptr, c_inner_x, Scale(474, dpi), card_w - Scale(170, dpi), Scale(22, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_check_update_, nullptr, c_inner_x + card_w - Scale(165, dpi), Scale(472, dpi), Scale(135, dpi), Scale(26, dpi), SWP_NOZORDER);
 
   // 底部动作按钮
-  const int btn_y = Scale(510, dpi);
+  const int btn_y = Scale(536, dpi);
   SetWindowPos(btn_save_, nullptr, pad_x, btn_y, Scale(130, dpi), Scale(34, dpi), SWP_NOZORDER);
   SetWindowPos(btn_defaults_, nullptr, pad_x + Scale(140, dpi), btn_y, Scale(110, dpi), Scale(34, dpi), SWP_NOZORDER);
   SetWindowPos(btn_close_, nullptr, pad_x + card_w - Scale(90, dpi), btn_y, Scale(90, dpi), Scale(34, dpi), SWP_NOZORDER);
@@ -431,6 +439,7 @@ void SettingsWindow::LoadValuesToUI() {
   // System
   Button_SetCheck(chk_auto_dpi_, config_.auto_dpi ? BST_CHECKED : BST_UNCHECKED);
   Button_SetCheck(chk_autostart_, autostart::IsAutoStartEnabled() ? BST_CHECKED : BST_UNCHECKED);
+  Button_SetCheck(chk_auto_check_update_, config_.auto_check_update ? BST_CHECKED : BST_UNCHECKED);
 
   InvalidateRect(preview_light_, nullptr, TRUE);
   InvalidateRect(preview_dark_, nullptr, TRUE);
@@ -482,6 +491,7 @@ bool SettingsWindow::SaveValuesFromUI() {
 
   // System
   updated.auto_dpi = Button_GetCheck(chk_auto_dpi_) == BST_CHECKED;
+  updated.auto_check_update = Button_GetCheck(chk_auto_check_update_) == BST_CHECKED;
   const bool enable_autostart = Button_GetCheck(chk_autostart_) == BST_CHECKED;
   autostart::SetAutoStart(enable_autostart);
 
@@ -559,6 +569,10 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
     case WM_COMMAND: {
       const UINT id = LOWORD(wp);
+      if (id == IDC_BTN_CHECK_UPDATE) {
+        updater::CheckUpdateAsync(hwnd, /*silent_if_latest=*/false);
+        return 0;
+      }
       if (id == IDC_BTN_SAVE) {
         SaveValuesFromUI();
         return 0;
@@ -666,7 +680,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       draw_card(Scale(14, dpi), Scale(138, dpi), L"🎯 辅助线尺寸与外观");
       draw_card(Scale(162, dpi), Scale(120, dpi), L"🎨 色彩模式与透明度");
       draw_card(Scale(292, dpi), Scale(92, dpi), L"⌨️ 全局快捷键");
-      draw_card(Scale(394, dpi), Scale(86, dpi), L"🚀 系统偏好");
+      draw_card(Scale(394, dpi), Scale(118, dpi), L"🚀 系统偏好与软件更新");
 
       // 绘制各行的静态提示文字
       SelectFont(hdc, font_regular_);

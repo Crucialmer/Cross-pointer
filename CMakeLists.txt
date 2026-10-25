@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(CrossPointer VERSION 1.1 LANGUAGES CXX)
+project(CrossPointer VERSION 1.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -26,6 +26,7 @@ add_executable(
   src/tray.cpp
   src/autostart.cpp
   src/settings_window.cpp
+  src/updater.cpp
   res/resource.rc
   res/CrossPointer.manifest
 )
@@ -65,4 +66,5 @@ target_link_libraries(CrossPointer PRIVATE
   dwmapi
   comctl32
   comdlg32
+  wininet
 )

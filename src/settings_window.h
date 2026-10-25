@@ -51,6 +51,8 @@ class SettingsWindow {
   HWND chk_auto_theme_ = nullptr;
   HWND chk_auto_dpi_ = nullptr;
   HWND chk_autostart_ = nullptr;
+  HWND chk_auto_check_update_ = nullptr;
+  HWND btn_check_update_ = nullptr;
 
   HWND slider_gap_ = nullptr;
   HWND lbl_gap_val_ = nullptr;

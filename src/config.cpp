@@ -148,6 +148,11 @@ bool Config::Load(const wchar_t* filename) {
       ReadUnsigned(L"Display", L"AutoDpi", filename, 0, 1);
   loaded.auto_dpi = auto_dpi_val.value_or(1) != 0;
 
+  // 自动检查更新配置项 (默认为开启)
+  const auto auto_update_val =
+      ReadUnsigned(L"Update", L"AutoCheckUpdate", filename, 0, 1);
+  loaded.auto_check_update = auto_update_val.value_or(1) != 0;
+
   // 浅色主题预设 (可选)
   const auto light_r = ReadUnsigned(L"Light_Mode", L"R", filename, 0, 255);
   const auto light_g = ReadUnsigned(L"Light_Mode", L"G", filename, 0, 255);
@@ -210,6 +215,10 @@ bool Config::Save(const wchar_t* filename) const {
   ss << L"[Display]\n";
   ss << L"# 是否开启高 DPI / 4K / 8K 分辨率自适应缩放 (1 = 开启, 0 = 关闭)\n";
   ss << L"AutoDpi = " << (auto_dpi ? 1 : 0) << L"\n\n";
+
+  ss << L"[Update]\n";
+  ss << L"# 启动时自动检查更新 (1 = 开启, 0 = 关闭)\n";
+  ss << L"AutoCheckUpdate = " << (auto_check_update ? 1 : 0) << L"\n\n";
 
   ss << L"[Light_Mode]\n";
   ss << L"# 浅色模式专属色彩（白底文档/表格）\n";

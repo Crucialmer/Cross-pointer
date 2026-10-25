@@ -11,6 +11,10 @@ AutoFollowSystem = 1
 # 是否开启高 DPI / 4K / 8K 分辨率自适应缩放 (1 = 开启, 0 = 关闭)
 AutoDpi = 1
 
+[Update]
+# 启动时自动检查更新 (1 = 开启, 0 = 关闭)
+AutoCheckUpdate = 1
+
 [Light_Mode]
 # 浅色模式（白底文档/表格）：推荐高对比沉稳蔚蓝
 R = 0

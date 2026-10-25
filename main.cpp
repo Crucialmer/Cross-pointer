@@ -12,6 +12,7 @@
 #include "src/hotkey.h"
 #include "src/settings_window.h"
 #include "src/tray.h"
+#include "src/updater.h"
 
 namespace {
 constexpr wchar_t kMutexName[] =
@@ -178,6 +179,11 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
           return 0;
         }
 
+        case IDM_TRAY_CHECK_UPDATE: {
+          updater::CheckUpdateAsync(window, /*silent_if_latest=*/false);
+          return 0;
+        }
+
         case IDM_TRAY_OPEN_CONFIG: {
           ShellExecuteW(nullptr, L"open", ctx->config_path.c_str(), nullptr,
                         nullptr, SW_SHOW);
@@ -208,11 +214,12 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
         case IDM_TRAY_ABOUT: {
           MessageBoxW(
               window,
-              L"CrossPointer 1.1 (macOS 26 设计美学与 8K 高 DPI 适配版)\n\n"
+              L"CrossPointer 1.2 (macOS 26 设计美学、8K 高 DPI 适配与在线更新版)\n\n"
               L"• 左键点击托盘：一键切换十字线显隐\n"
               L"• 双击点击托盘：打开现代化 macOS 卡片风格偏好设置窗口\n"
-              L"• 右键点击托盘：功能菜单与快捷控制\n"
+              L"• 右键点击托盘：功能菜单、在线检查更新与快捷控制\n"
               L"• 8K 与高 DPI 适配：物理微米级动态高刷缩放\n"
+              L"• 软件更新选项：一键检测并提示云端新版本\n"
               L"• 开机自启动：纯便携免安装自启动管理\n"
               L"• 跟随系统主题：毫秒级响应深浅色自适应切换\n\n"
               L"100% 纯绿色运行，零系统残留。\n"
@@ -303,6 +310,10 @@ int Run(HINSTANCE instance) {
 
   context.tray.Initialize(instance, controller);
   context.tray.UpdateTooltip(FormatHotkeyTooltip(context.raw_config.hotkey_h_s));
+
+  if (context.raw_config.auto_check_update) {
+    updater::CheckUpdateAsync(controller, /*silent_if_latest=*/true);
+  }
 
   int result = 0;
   MSG message = {};
