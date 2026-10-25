@@ -65,9 +65,10 @@ void TrayManager::ShowContextMenu(HWND window, POINT pt,
       is_visible ? L"隐藏十字线 (&H)" : L"显示十字线 (&S)";
   AppendMenuW(menu, MF_STRING, IDM_TRAY_TOGGLE, toggle_text);
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, IDM_TRAY_OPEN_CONFIG,
-              L"⚙️ 设置快捷键与外观 (&O)");
+  AppendMenuW(menu, MF_STRING, IDM_TRAY_SETTINGS, L"⚙️ 偏好设置... (&P)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_RELOAD, L"🔄 重新载入配置 (&R)");
+  AppendMenuW(menu, MF_STRING, IDM_TRAY_OPEN_CONFIG,
+              L"📝 高级：打开配置文件 (&O)");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, IDM_TRAY_ABOUT, L"ℹ️ 关于 CrossPointer (&A)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_EXIT, L"🚪 退出 (&X)");

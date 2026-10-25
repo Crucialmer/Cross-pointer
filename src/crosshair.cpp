@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace {
 constexpr wchar_t kClassName[] = L"MouseCrosshairWindow";
@@ -21,6 +22,29 @@ D2D1_COLOR_F ToD2DColor(const LineConfig& line) noexcept {
   return D2D1::ColorF(static_cast<float>(line.r.value) / 255.0F,
                       static_cast<float>(line.g.value) / 255.0F,
                       static_cast<float>(line.b.value) / 255.0F, 1.0F);
+}
+
+float GetMonitorDpiScale(HMONITOR monitor) noexcept {
+  using GetDpiForMonitorFn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+  static const auto get_dpi_fn = []() -> GetDpiForMonitorFn {
+    const HMODULE shcore = LoadLibraryExW(L"shcore.dll", nullptr,
+                                         LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (shcore != nullptr) {
+      return reinterpret_cast<GetDpiForMonitorFn>(
+          GetProcAddress(shcore, "GetDpiForMonitor"));
+    }
+    return nullptr;
+  }();
+
+  if (get_dpi_fn != nullptr && monitor != nullptr) {
+    UINT dpi_x = 96;
+    UINT dpi_y = 96;
+    if (SUCCEEDED(get_dpi_fn(monitor, 0 /* MDT_EFFECTIVE_DPI */, &dpi_x,
+                            &dpi_y))) {
+      return static_cast<float>(dpi_x) / 96.0f;
+    }
+  }
+  return 1.0f;
 }
 }  // namespace
 
@@ -64,7 +88,6 @@ bool CrosshairWindow::Create() {
   }
   class_registered_ = true;
 
-  // 窗口先以最小尺寸隐藏创建，避免首次定位前在屏幕角落闪烁。
   auto create_window = [this]() {
     return CreateWindowExW(kExtendedWindowStyle, kClassName, L"", WS_POPUP, 0,
                            0, 1, 1, nullptr, nullptr, instance_, this);
@@ -81,7 +104,6 @@ bool CrosshairWindow::Create() {
     return false;
   }
 
-  // 配置 layered 属性时保持隐藏，避免 Direct2D 初始化前短暂闪烁。
   visible_ = false;
   const bool config_applied = ApplyConfig(config_);
   visible_ = true;
@@ -155,7 +177,6 @@ bool CrosshairWindow::InitializeDirect2D() {
 }
 
 void CrosshairWindow::CleanupDirect2D() noexcept {
-  // Brush 依赖其 render target，必须先释放。
   SafeRelease(left_brush_);
   SafeRelease(right_brush_);
   SafeRelease(top_brush_);
@@ -240,10 +261,16 @@ void CrosshairWindow::UpdatePosition() {
     return;
   }
 
+  // 8K 与高 DPI 屏幕动态无损适配：根据当前显示器物理 DPI 自适应缩放
+  const float dpi_scale = config_.auto_dpi ? GetMonitorDpiScale(monitor) : 1.0f;
   const RECT bounds = monitor_info.rcMonitor;
-  const int gap = static_cast<int>(config_.gap);
-  const int horizontal_width = static_cast<int>(config_.horizontal.width);
-  const int vertical_width = static_cast<int>(config_.vertical.width);
+
+  const int gap = static_cast<int>(std::round(config_.gap * dpi_scale));
+  const int horizontal_width = std::max(
+      1, static_cast<int>(std::round(config_.horizontal.width * dpi_scale)));
+  const int vertical_width = std::max(
+      1, static_cast<int>(std::round(config_.vertical.width * dpi_scale)));
+
   const int horizontal_y = std::clamp(cursor.y - horizontal_width / 2,
                                       bounds.top, bounds.bottom);
   const int vertical_x = std::clamp(cursor.x - vertical_width / 2, bounds.left,

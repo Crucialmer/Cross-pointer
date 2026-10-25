@@ -1,8 +1,10 @@
 #include "./config.h"
 
 #include <cwctype>
+#include <fstream>
 #include <limits>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -136,10 +138,15 @@ bool Config::Load(const wchar_t* filename) {
     return false;
   }
 
-  // 可选主题配置项 (默认为跟随系统)
+  // 主题配置项 (默认为跟随系统)
   const auto auto_follow =
       ReadUnsigned(L"Theme", L"AutoFollowSystem", filename, 0, 1);
   loaded.auto_theme = auto_follow.value_or(1) != 0;
+
+  // 高 DPI / 8K 分辨率自适应配置项 (默认为开启)
+  const auto auto_dpi_val =
+      ReadUnsigned(L"Display", L"AutoDpi", filename, 0, 1);
+  loaded.auto_dpi = auto_dpi_val.value_or(1) != 0;
 
   // 浅色主题预设 (可选)
   const auto light_r = ReadUnsigned(L"Light_Mode", L"R", filename, 0, 255);
@@ -190,6 +197,116 @@ bool Config::Load(const wchar_t* filename) {
 
   *this = loaded;
   return true;
+}
+
+bool Config::Save(const wchar_t* filename) const {
+  if (filename == nullptr || *filename == L'\0') return false;
+
+  std::wostringstream ss;
+  ss << L"[Theme]\n";
+  ss << L"# 1 = 跟随系统自动切换黑白模式 (推荐); 0 = 关闭自动切换\n";
+  ss << L"AutoFollowSystem = " << (auto_theme ? 1 : 0) << L"\n\n";
+
+  ss << L"[Display]\n";
+  ss << L"# 是否开启高 DPI / 4K / 8K 分辨率自适应缩放 (1 = 开启, 0 = 关闭)\n";
+  ss << L"AutoDpi = " << (auto_dpi ? 1 : 0) << L"\n\n";
+
+  ss << L"[Light_Mode]\n";
+  ss << L"# 浅色模式专属色彩（白底文档/表格）\n";
+  ss << L"R = " << static_cast<int>(light_theme.r.value) << L"\n";
+  ss << L"G = " << static_cast<int>(light_theme.g.value) << L"\n";
+  ss << L"B = " << static_cast<int>(light_theme.b.value) << L"\n";
+  ss << L"Alpha = " << static_cast<int>(light_theme.alpha.value) << L"\n\n";
+
+  ss << L"[Dark_Mode]\n";
+  ss << L"# 深色模式专属色彩（深色代码/夜间背景）\n";
+  ss << L"R = " << static_cast<int>(dark_theme.r.value) << L"\n";
+  ss << L"G = " << static_cast<int>(dark_theme.g.value) << L"\n";
+  ss << L"B = " << static_cast<int>(dark_theme.b.value) << L"\n";
+  ss << L"Alpha = " << static_cast<int>(dark_theme.alpha.value) << L"\n\n";
+
+  ss << L"[Crosshair]\n";
+  ss << L"Gap = " << gap << L"\n\n";
+
+  ss << L"[Horizontal]\n";
+  ss << L"Width = " << horizontal.width << L"\n";
+  ss << L"R = " << static_cast<int>(horizontal.r.value) << L"\n";
+  ss << L"G = " << static_cast<int>(horizontal.g.value) << L"\n";
+  ss << L"B = " << static_cast<int>(horizontal.b.value) << L"\n";
+  ss << L"Alpha = " << static_cast<int>(horizontal.alpha.value) << L"\n\n";
+
+  ss << L"[Vertical]\n";
+  ss << L"Width = " << vertical.width << L"\n";
+  ss << L"R = " << static_cast<int>(vertical.r.value) << L"\n";
+  ss << L"G = " << static_cast<int>(vertical.g.value) << L"\n";
+  ss << L"B = " << static_cast<int>(vertical.b.value) << L"\n";
+  ss << L"Alpha = " << static_cast<int>(vertical.alpha.value) << L"\n\n";
+
+  ss << L"[Hide_Show_Hotkey]\n";
+  ss << L"Mod = " << ModToString(hotkey_h_s.mod) << L"\n";
+  ss << L"VK = " << VKToString(hotkey_h_s.vk) << L"\n\n";
+
+  ss << L"[Exit_Hotkey]\n";
+  ss << L"Mod = " << ModToString(hotkey_exit.mod) << L"\n";
+  ss << L"VK = " << VKToString(hotkey_exit.vk) << L"\n";
+
+  const std::wstring content = ss.str();
+  // 以 UTF-8 编码写入文件
+  HANDLE file = CreateFileW(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file == INVALID_HANDLE_VALUE) return false;
+
+  const int utf8_len = WideCharToMultiByte(CP_UTF8, 0, content.c_str(), -1,
+                                          nullptr, 0, nullptr, nullptr);
+  if (utf8_len <= 1) {
+    CloseHandle(file);
+    return false;
+  }
+
+  std::string utf8_str(utf8_len - 1, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, content.c_str(), -1, utf8_str.data(),
+                      utf8_len - 1, nullptr, nullptr);
+
+  DWORD written = 0;
+  const BOOL ok = WriteFile(file, utf8_str.data(),
+                            static_cast<DWORD>(utf8_str.size()), &written,
+                            nullptr);
+  CloseHandle(file);
+  return ok != FALSE;
+}
+
+std::wstring Config::ModToString(unsigned int mod) {
+  std::wstring res;
+  if ((mod & MOD_CONTROL) != 0) res += L"Ctrl,";
+  if ((mod & MOD_ALT) != 0) res += L"Alt,";
+  if ((mod & MOD_WIN) != 0) res += L"Win,";
+  if ((mod & MOD_SHIFT) != 0) res += L"Shift,";
+  if (!res.empty() && res.back() == L',') res.pop_back();
+  return res;
+}
+
+std::wstring Config::VKToString(unsigned int vk) {
+  if (vk >= L'A' && vk <= L'Z') return std::wstring(1, static_cast<wchar_t>(vk));
+  if (vk >= L'0' && vk <= L'9') return std::wstring(1, static_cast<wchar_t>(vk));
+  if (vk >= VK_F1 && vk <= VK_F24) return L"F" + std::to_wstring(vk - VK_F1 + 1);
+  if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return L"Numpad" + std::to_wstring(vk - VK_NUMPAD0);
+
+  switch (vk) {
+    case VK_SPACE: return L"Space";
+    case VK_TAB: return L"Tab";
+    case VK_RETURN: return L"Enter";
+    case VK_ESCAPE: return L"Escape";
+    case VK_BACK: return L"Backspace";
+    case VK_DELETE: return L"Delete";
+    case VK_INSERT: return L"Insert";
+    case VK_XBUTTON1: return L"XButton1";
+    case VK_XBUTTON2: return L"XButton2";
+    case VK_OEM_PLUS: return L"Plus";
+    case VK_OEM_MINUS: return L"Minus";
+    case VK_OEM_COMMA: return L"Comma";
+    case VK_OEM_PERIOD: return L"Period";
+    default: return std::wstring(1, static_cast<wchar_t>(vk));
+  }
 }
 
 void Config::ClampAll() noexcept {

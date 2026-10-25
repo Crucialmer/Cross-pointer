@@ -7,6 +7,10 @@ inline constexpr char kDefaultIni[] = R"([Theme]
 # 0 = 关闭自动切换，使用固定颜色
 AutoFollowSystem = 1
 
+[Display]
+# 是否开启高 DPI / 4K / 8K 分辨率自适应缩放 (1 = 开启, 0 = 关闭)
+AutoDpi = 1
+
 [Light_Mode]
 # 浅色模式（白底文档/表格）：推荐高对比沉稳蔚蓝
 R = 0

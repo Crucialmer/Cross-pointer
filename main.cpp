@@ -5,10 +5,12 @@
 #include <exception>
 #include <string>
 
+#include "src/autostart.h"
 #include "src/config.h"
 #include "src/config_file_util.h"
 #include "src/crosshair.h"
 #include "src/hotkey.h"
+#include "src/settings_window.h"
 #include "src/tray.h"
 
 namespace {
@@ -52,7 +54,7 @@ class UniqueHandle {
 };
 
 // RAII 精度计时器：将 Windows 调度器时钟中断精度提升到 1ms，
-// 确保在 120Hz/144Hz 高刷屏下鼠标十字线移动如丝绸般平滑。
+// 确保在 120Hz/144Hz 高刷屏及 8K 超高分辨率屏幕下鼠标十字线移动如丝绸般平滑。
 class PrecisionTimerScope {
  public:
   PrecisionTimerScope() noexcept { timeBeginPeriod(1); }
@@ -88,7 +90,7 @@ std::wstring FormatHotkeyTooltip(const HotkeyConfig& hotkey) {
   } else if (hotkey.vk >= VK_F1 && hotkey.vk <= VK_F24) {
     tip += L"F" + std::to_wstring(hotkey.vk - VK_F1 + 1);
   } else {
-    tip += L"Key";
+    tip += Config::VKToString(hotkey.vk);
   }
   tip += L")";
   return tip;
@@ -101,6 +103,7 @@ struct AppContext {
   Config active_config;
   CrosshairWindow* crosshair = nullptr;
   TrayManager tray;
+  SettingsWindow settings_win;
 
   void RefreshActiveTheme() {
     const bool is_light = IsSystemInLightTheme();
@@ -142,7 +145,7 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
       } else if (l_param == WM_LBUTTONUP) {
         PostMessageW(window, WM_COMMAND, IDM_TRAY_TOGGLE, 0);
       } else if (l_param == WM_LBUTTONDBLCLK) {
-        PostMessageW(window, WM_COMMAND, IDM_TRAY_OPEN_CONFIG, 0);
+        PostMessageW(window, WM_COMMAND, IDM_TRAY_SETTINGS, 0);
       }
       return 0;
     }
@@ -153,6 +156,25 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
       switch (command_id) {
         case IDM_TRAY_TOGGLE: {
           ctx->crosshair->ToggleVisible();
+          return 0;
+        }
+
+        case IDM_TRAY_SETTINGS: {
+          ctx->settings_win.Show(
+              ctx->instance, window, ctx->raw_config, ctx->config_path,
+              [ctx](const Config& new_config) -> bool {
+                if (!HotkeyManager::Register(new_config.hotkey_h_s,
+                                             new_config.hotkey_exit)) {
+                  HotkeyManager::Register(ctx->raw_config.hotkey_h_s,
+                                          ctx->raw_config.hotkey_exit);
+                  return false;
+                }
+                ctx->raw_config = new_config;
+                ctx->RefreshActiveTheme();
+                ctx->tray.UpdateTooltip(
+                    FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s));
+                return true;
+              });
           return 0;
         }
 
@@ -186,12 +208,14 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
         case IDM_TRAY_ABOUT: {
           MessageBoxW(
               window,
-              L"CrossPointer 1.0 (macOS 26 设计美学版)\n\n"
+              L"CrossPointer 1.1 (macOS 26 设计美学与 8K 高 DPI 适配版)\n\n"
               L"• 左键点击托盘：一键切换十字线显隐\n"
-              L"• 双击点击托盘：打开 CrossPointer.ini 修改快捷键与参数\n"
-              L"• 右键点击托盘：快捷设置与控制菜单\n"
-              L"• 自动适配主题：跟随系统黑白深浅模式实时平滑切换色彩\n\n"
-              L"纯绿色运行，零外部残留。\n"
+              L"• 双击点击托盘：打开现代化 macOS 卡片风格偏好设置窗口\n"
+              L"• 右键点击托盘：功能菜单与快捷控制\n"
+              L"• 8K 与高 DPI 适配：物理微米级动态高刷缩放\n"
+              L"• 开机自启动：纯便携免安装自启动管理\n"
+              L"• 跟随系统主题：毫秒级响应深浅色自适应切换\n\n"
+              L"100% 纯绿色运行，零系统残留。\n"
               L"Copyright © 2026 Crucialmer",
               L"关于 CrossPointer", MB_OK | MB_ICONINFORMATION);
           return 0;
@@ -207,6 +231,7 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
 
     case WM_DESTROY: {
       if (ctx != nullptr) {
+        ctx->settings_win.Close();
         ctx->tray.Remove();
       }
       break;
@@ -314,6 +339,7 @@ int Run(HINSTANCE instance) {
   }
 
   HotkeyManager::UnregisterAll();
+  context.settings_win.Close();
   context.tray.Remove();
   DestroyWindow(controller);
   UnregisterClassW(kControllerClassName, instance);

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 #include <utility>
 #include <windows.h>
 
@@ -40,6 +41,7 @@ struct HotkeyConfig {
 struct Config {
   unsigned int gap = 16;
   bool auto_theme = true;
+  bool auto_dpi = true;  // 适配高 DPI / 4K / 8K 分辨率按比例缩放
 
   LineColor light_theme{ColorChannel(0), ColorChannel(102), ColorChannel(230),
                         ColorChannel(200)};
@@ -52,9 +54,12 @@ struct Config {
   HotkeyConfig hotkey_exit;
 
   [[nodiscard]] bool Load(const wchar_t* filename);
+  [[nodiscard]] bool Save(const wchar_t* filename) const;
 
   static unsigned int ParseMod(const wchar_t* text, bool function_key);
   static std::pair<unsigned int, bool> ParseVK(const wchar_t* text, char mode);
+  static std::wstring ModToString(unsigned int mod);
+  static std::wstring VKToString(unsigned int vk);
 
   void ClampAll() noexcept;
 };
