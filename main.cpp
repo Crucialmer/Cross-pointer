@@ -16,6 +16,27 @@ constexpr wchar_t kMutexName[] =
     L"Local\\CrossPointer_F5B6239126A64833BE094D6DC8DC1951";
 constexpr wchar_t kControllerClassName[] = L"CrossPointerControllerClass";
 
+enum class PreferredAppMode {
+  Default,
+  AllowDark,
+  ForceDark,
+  ForceLight,
+  Max
+};
+using fnSetPreferredAppMode = PreferredAppMode(WINAPI*)(PreferredAppMode);
+
+void EnableDarkModeSupport() noexcept {
+  const HMODULE uxtheme = LoadLibraryExW(L"uxtheme.dll", nullptr,
+                                         LOAD_LIBRARY_SEARCH_SYSTEM32);
+  if (uxtheme != nullptr) {
+    const auto set_mode = reinterpret_cast<fnSetPreferredAppMode>(
+        GetProcAddress(uxtheme, MAKEINTRESOURCEA(135)));
+    if (set_mode != nullptr) {
+      set_mode(PreferredAppMode::AllowDark);
+    }
+  }
+}
+
 class UniqueHandle {
  public:
   explicit UniqueHandle(HANDLE handle = nullptr) noexcept : handle_(handle) {}
@@ -76,9 +97,18 @@ std::wstring FormatHotkeyTooltip(const HotkeyConfig& hotkey) {
 struct AppContext {
   HINSTANCE instance = nullptr;
   std::wstring config_path;
-  Config config;
+  Config raw_config;
+  Config active_config;
   CrosshairWindow* crosshair = nullptr;
   TrayManager tray;
+
+  void RefreshActiveTheme() {
+    const bool is_light = IsSystemInLightTheme();
+    active_config = GetThemedConfig(raw_config, is_light);
+    if (crosshair != nullptr) {
+      crosshair->ApplyConfig(active_config);
+    }
+  }
 };
 
 LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
@@ -93,6 +123,14 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
       SetWindowLongPtrW(window, GWLP_USERDATA,
                         reinterpret_cast<LONG_PTR>(ctx));
       return TRUE;
+    }
+
+    // 监听系统深浅主题切换（Windows 10/11 实时广播）
+    case WM_SETTINGCHANGE: {
+      if (ctx != nullptr && ctx->raw_config.auto_theme) {
+        ctx->RefreshActiveTheme();
+      }
+      break;
     }
 
     case WM_TRAYICON: {
@@ -132,17 +170,16 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
             return 0;
           }
           if (!HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
-            HotkeyManager::Register(ctx->config.hotkey_h_s, ctx->config.hotkey_exit);
+            HotkeyManager::Register(ctx->raw_config.hotkey_h_s, ctx->raw_config.hotkey_exit);
             MessageBoxW(window, L"新热键已被占用，已保留原有配置。", L"警告",
                         MB_OK | MB_ICONWARNING);
             return 0;
           }
-          if (ctx->crosshair->ApplyConfig(updated)) {
-            ctx->config = updated;
-            ctx->tray.UpdateTooltip(FormatHotkeyTooltip(ctx->config.hotkey_h_s));
-            MessageBoxW(window, L"配置已成功重新载入并生效！", L"提示",
-                        MB_OK | MB_ICONINFORMATION);
-          }
+          ctx->raw_config = updated;
+          ctx->RefreshActiveTheme();
+          ctx->tray.UpdateTooltip(FormatHotkeyTooltip(ctx->raw_config.hotkey_h_s));
+          MessageBoxW(window, L"配置已成功重新载入并生效！", L"提示",
+                      MB_OK | MB_ICONINFORMATION);
           return 0;
         }
 
@@ -152,7 +189,8 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
               L"Cross-pointer 1.0 (macOS 26 设计美学版)\n\n"
               L"• 左键点击托盘：一键切换十字线显隐\n"
               L"• 双击点击托盘：打开 Cross-pointer.ini 修改快捷键与参数\n"
-              L"• 右键点击托盘：快捷设置与控制菜单\n\n"
+              L"• 右键点击托盘：快捷设置与控制菜单\n"
+              L"• 自动适配主题：跟随系统黑白深浅模式实时平滑切换色彩\n\n"
               L"纯绿色运行，零外部残留。\n"
               L"Copyright © 2026 Crucialmer",
               L"关于 Cross-pointer", MB_OK | MB_ICONINFORMATION);
@@ -190,25 +228,28 @@ int Run(HINSTANCE instance) {
     return 0;
   }
 
+  EnableDarkModeSupport();
   const PrecisionTimerScope precision_timer;
   EnableBestDpiAwareness();
   const std::wstring config_path = GetConfigPath();
   if (!EnsureConfigExists(config_path)) return 1;
 
-  Config config;
-  if (!config.Load(config_path.c_str())) {
+  Config raw_config;
+  if (!raw_config.Load(config_path.c_str())) {
     MessageBoxW(nullptr, L"配置文件无效，请修正后重新启动程序。", L"错误",
                 MB_OK | MB_ICONERROR);
     return 1;
   }
 
-  CrosshairWindow crosshair(instance, config);
+  Config active_config = GetThemedConfig(raw_config, IsSystemInLightTheme());
+
+  CrosshairWindow crosshair(instance, active_config);
   if (!crosshair.Create()) {
     MessageBoxW(nullptr, L"创建或初始化准星窗口失败。", L"错误",
                 MB_OK | MB_ICONERROR);
     return 1;
   }
-  if (!HotkeyManager::Register(config.hotkey_h_s, config.hotkey_exit)) {
+  if (!HotkeyManager::Register(raw_config.hotkey_h_s, raw_config.hotkey_exit)) {
     MessageBoxW(nullptr, L"注册全局热键失败；热键可能已被其他程序占用。",
                 L"错误", MB_OK | MB_ICONERROR);
     return 1;
@@ -217,7 +258,8 @@ int Run(HINSTANCE instance) {
   AppContext context;
   context.instance = instance;
   context.config_path = config_path;
-  context.config = config;
+  context.raw_config = raw_config;
+  context.active_config = active_config;
   context.crosshair = &crosshair;
 
   WNDCLASSEXW wc = {sizeof(wc)};
@@ -235,7 +277,7 @@ int Run(HINSTANCE instance) {
   }
 
   context.tray.Initialize(instance, controller);
-  context.tray.UpdateTooltip(FormatHotkeyTooltip(context.config.hotkey_h_s));
+  context.tray.UpdateTooltip(FormatHotkeyTooltip(context.raw_config.hotkey_h_s));
 
   int result = 0;
   MSG message = {};
@@ -258,10 +300,9 @@ int Run(HINSTANCE instance) {
           continue;
         }
         if (HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
-          if (crosshair.ApplyConfig(updated)) {
-            context.config = updated;
-            context.tray.UpdateTooltip(FormatHotkeyTooltip(context.config.hotkey_h_s));
-          }
+          context.raw_config = updated;
+          context.RefreshActiveTheme();
+          context.tray.UpdateTooltip(FormatHotkeyTooltip(context.raw_config.hotkey_h_s));
         }
         crosshair.ToggleVisible();
         continue;
