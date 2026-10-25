@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <timeapi.h>
 
 #include <exception>
 #include <string>
@@ -10,7 +11,7 @@
 
 namespace {
 constexpr wchar_t kMutexName[] =
-    L"Local\\F5B6239126A64833BE094D6DC8DC1951";
+    L"Local\\CrossPointer_F5B6239126A64833BE094D6DC8DC1951";
 
 class UniqueHandle {
  public:
@@ -24,6 +25,16 @@ class UniqueHandle {
 
  private:
   HANDLE handle_;
+};
+
+// RAII 精度计时器：将 Windows 调度器时钟中断精度提升到 1ms，
+// 确保在 120Hz/144Hz 高刷屏下鼠标十字线移动如丝绸般平滑。
+class PrecisionTimerScope {
+ public:
+  PrecisionTimerScope() noexcept { timeBeginPeriod(1); }
+  ~PrecisionTimerScope() noexcept { timeEndPeriod(1); }
+  PrecisionTimerScope(const PrecisionTimerScope&) = delete;
+  PrecisionTimerScope& operator=(const PrecisionTimerScope&) = delete;
 };
 
 void EnableBestDpiAwareness() noexcept {
@@ -47,11 +58,12 @@ int Run(HINSTANCE instance) {
     return 1;
   }
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    MessageBoxW(nullptr, L"程序已经在当前用户会话中运行。", L"提示",
+    MessageBoxW(nullptr, L"Cross-pointer 已经在运行中。", L"提示",
                 MB_OK | MB_ICONINFORMATION);
     return 0;
   }
 
+  const PrecisionTimerScope precision_timer;
   EnableBestDpiAwareness();
   const std::wstring config_path = GetConfigPath();
   if (!EnsureConfigExists(config_path)) return 1;
