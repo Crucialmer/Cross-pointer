@@ -43,5 +43,5 @@ target_link_options(Cross-pointer PRIVATE
   $<$<CONFIG:Release>:/LTCG /OPT:REF /OPT:ICF>
 )
 
-# Link Windows system libraries
-target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1)
+# Link Windows system libraries (winmm added for 1ms precision timer)
+target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1 winmm)
