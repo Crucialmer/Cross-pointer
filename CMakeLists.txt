@@ -44,4 +44,4 @@ target_link_options(Cross-pointer PRIVATE
 )
 
 # Link Windows system libraries
-target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1 winmm shell32)
+target_link_libraries(Cross-pointer PRIVATE user32 gdi32 d2d1 winmm shell32 advapi32 uxtheme)
