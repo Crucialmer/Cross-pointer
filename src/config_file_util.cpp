@@ -1,10 +1,8 @@
 #include "./config_file_util.h"
 
 #include <windows.h>
-#include <shlobj.h>
 
 #include <filesystem>
-#include <fstream>
 #include <system_error>
 #include <vector>
 
@@ -25,54 +23,33 @@ std::wstring GetExecutablePath() {
   }
 }
 
-std::wstring GetLocalAppDataConfigPath() {
-  PWSTR raw_path = nullptr;
-  const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData,
-                                               KF_FLAG_CREATE, nullptr,
-                                               &raw_path);
-  if (FAILED(result) || raw_path == nullptr) return {};
-  const std::filesystem::path path =
-      std::filesystem::path(raw_path) / L"MouseCrosshair" / L"crosshair.ini";
-  CoTaskMemFree(raw_path);
-  return path.wstring();
-}
-
 bool IsRegularFile(const std::filesystem::path& path) {
   std::error_code error;
   return std::filesystem::is_regular_file(path, error) && !error;
-}
-
-bool CanCreateInDirectory(const std::filesystem::path& directory) {
-  std::error_code error;
-  if (!std::filesystem::is_directory(directory, error) || error) return false;
-  const auto probe = directory / L".mouse_crosshair_write_test.tmp";
-  HANDLE file = CreateFileW(probe.c_str(), GENERIC_WRITE, 0, nullptr,
-                            CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY |
-                                            FILE_FLAG_DELETE_ON_CLOSE,
-                            nullptr);
-  if (file == INVALID_HANDLE_VALUE) return false;
-  CloseHandle(file);
-  return true;
 }
 }  // namespace
 
 std::wstring GetConfigPath() {
   const std::wstring executable = GetExecutablePath();
-  if (!executable.empty()) {
-    const std::filesystem::path portable_path =
-        std::filesystem::path(executable).parent_path() / L"crosshair.ini";
-    // 已存在的便携配置始终优先；否则仅在目录可写时创建。
-    if (IsRegularFile(portable_path) ||
-        CanCreateInDirectory(portable_path.parent_path())) {
-      return portable_path.wstring();
-    }
+  if (executable.empty()) return {};
+
+  const std::filesystem::path exe_dir =
+      std::filesystem::path(executable).parent_path();
+  const std::filesystem::path primary_config = exe_dir / L"Cross-pointer.ini";
+  const std::filesystem::path legacy_config = exe_dir / L"crosshair.ini";
+
+  // 绾豢鑹叉ā寮忥細浠呭湪绋嬪簭鍚岀洰褰曚笅妫€绱㈡垨鍒涘缓閰嶇疆鏂囦欢锛屾潨缁濆啓鍏ヤ换浣曞閮ㄧ郴缁熺洰褰?  if (IsRegularFile(primary_config)) {
+    return primary_config.wstring();
   }
-  return GetLocalAppDataConfigPath();
+  if (IsRegularFile(legacy_config)) {
+    return legacy_config.wstring();
+  }
+  return primary_config.wstring();
 }
 
 bool EnsureConfigExists(const std::wstring& path) {
   if (path.empty()) {
-    MessageBoxW(nullptr, L"无法确定配置文件路径。", L"错误",
+    MessageBoxW(nullptr, L"鏃犳硶纭畾绋嬪簭鎵€鍦ㄧ洰褰曘€?, L"閿欒",
                 MB_OK | MB_ICONERROR);
     return false;
   }
@@ -80,19 +57,16 @@ bool EnsureConfigExists(const std::wstring& path) {
   const std::filesystem::path config_path(path);
   if (IsRegularFile(config_path)) return true;
 
-  std::error_code error;
-  std::filesystem::create_directories(config_path.parent_path(), error);
-  if (error) {
-    MessageBoxW(nullptr, L"无法创建配置目录。", L"错误",
-                MB_OK | MB_ICONERROR);
-    return false;
-  }
-
-  // CREATE_NEW 防止检查与创建之间覆盖另一个进程刚创建的文件。
+  // 鐩存帴鍦ㄧ▼搴忓綋鍓嶇洰褰曞垱寤洪厤缃枃浠讹紝涓嶄骇鐢熶换浣曞閮ㄦ垨涓存椂鎺㈡祴鏂囦欢
   HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
                             FILE_ATTRIBUTE_NORMAL, nullptr);
   if (file == INVALID_HANDLE_VALUE) {
-    return GetLastError() == ERROR_FILE_EXISTS;
+    if (GetLastError() == ERROR_FILE_EXISTS) return true;
+    MessageBoxW(
+        nullptr,
+        L"鏃犳硶鍦ㄧ▼搴忓綋鍓嶇洰褰曞垱寤洪厤缃枃浠讹紝璇风‘璁ゆ湰鏂囦欢澶瑰叿澶囧啓鏉冮檺锛堢函缁胯壊妯″紡涓嶅悜绯荤粺鍏朵粬鐩綍鍐欏叆浠讳綍鏂囦欢锛夈€?,
+        L"閿欒", MB_OK | MB_ICONERROR);
+    return false;
   }
 
   DWORD written = 0;
@@ -100,14 +74,13 @@ bool EnsureConfigExists(const std::wstring& path) {
   const bool success = WriteFile(file, kDefaultIni, size, &written, nullptr) &&
                        written == size && FlushFileBuffers(file);
   CloseHandle(file);
+
   if (!success) {
     DeleteFileW(path.c_str());
-    MessageBoxW(nullptr, L"写入默认配置文件失败。", L"错误",
+    MessageBoxW(nullptr, L"鍐欏叆榛樿閰嶇疆鏂囦欢澶辫触銆?, L"閿欒",
                 MB_OK | MB_ICONERROR);
     return false;
   }
 
-  MessageBoxW(nullptr, L"已创建默认配置文件。", L"成功",
-              MB_OK | MB_ICONINFORMATION);
   return true;
 }
