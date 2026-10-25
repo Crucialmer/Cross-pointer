@@ -62,6 +62,40 @@ std::optional<unsigned int> ReadUnsigned(const wchar_t* section,
 }
 }  // namespace
 
+bool IsSystemInLightTheme() noexcept {
+  DWORD light_theme = 1;
+  DWORD size = sizeof(light_theme);
+  const LSTATUS status = RegGetValueW(
+      HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"AppsUseLightTheme",
+      RRF_RT_REG_DWORD,
+      nullptr,
+      &light_theme,
+      &size);
+  if (status == ERROR_SUCCESS) {
+    return light_theme != 0;
+  }
+  return true;
+}
+
+Config GetThemedConfig(const Config& base, bool is_light) noexcept {
+  Config themed = base;
+  if (base.auto_theme) {
+    const LineColor& active = is_light ? base.light_theme : base.dark_theme;
+    themed.horizontal.r = active.r;
+    themed.horizontal.g = active.g;
+    themed.horizontal.b = active.b;
+    themed.horizontal.alpha = active.alpha;
+
+    themed.vertical.r = active.r;
+    themed.vertical.g = active.g;
+    themed.vertical.b = active.b;
+    themed.vertical.alpha = active.alpha;
+  }
+  return themed;
+}
+
 bool Config::Load(const wchar_t* filename) {
   if (filename == nullptr || *filename == L'\0') return false;
   const DWORD attributes = GetFileAttributesW(filename);
@@ -100,6 +134,33 @@ bool Config::Load(const wchar_t* filename) {
       !vertical_g || !vertical_b || !vertical_alpha || !hide_key || !hide_mod ||
       !exit_key || !exit_mod) {
     return false;
+  }
+
+  // 可选主题配置项 (默认为跟随系统)
+  const auto auto_follow =
+      ReadUnsigned(L"Theme", L"AutoFollowSystem", filename, 0, 1);
+  loaded.auto_theme = auto_follow.value_or(1) != 0;
+
+  // 浅色主题预设 (可选)
+  const auto light_r = ReadUnsigned(L"Light_Mode", L"R", filename, 0, 255);
+  const auto light_g = ReadUnsigned(L"Light_Mode", L"G", filename, 0, 255);
+  const auto light_b = ReadUnsigned(L"Light_Mode", L"B", filename, 0, 255);
+  const auto light_alpha =
+      ReadUnsigned(L"Light_Mode", L"Alpha", filename, 0, 255);
+  if (light_r && light_g && light_b && light_alpha) {
+    loaded.light_theme = {ColorChannel(*light_r), ColorChannel(*light_g),
+                          ColorChannel(*light_b), ColorChannel(*light_alpha)};
+  }
+
+  // 深色主题预设 (可选)
+  const auto dark_r = ReadUnsigned(L"Dark_Mode", L"R", filename, 0, 255);
+  const auto dark_g = ReadUnsigned(L"Dark_Mode", L"G", filename, 0, 255);
+  const auto dark_b = ReadUnsigned(L"Dark_Mode", L"B", filename, 0, 255);
+  const auto dark_alpha =
+      ReadUnsigned(L"Dark_Mode", L"Alpha", filename, 0, 255);
+  if (dark_r && dark_g && dark_b && dark_alpha) {
+    loaded.dark_theme = {ColorChannel(*dark_r), ColorChannel(*dark_g),
+                         ColorChannel(*dark_b), ColorChannel(*dark_alpha)};
   }
 
   loaded.gap = *gap_value;
