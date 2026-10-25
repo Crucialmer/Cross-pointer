@@ -20,10 +20,10 @@ BEGIN
             VALUE "FileVersion",        VERSION_STR
             VALUE "ProductVersion",     VERSION_STR
             VALUE "CompanyName",        "Crucialmer. MIT LICENSE."
-            VALUE "FileDescription",    "Cross-pointer Screen Overlay"
+            VALUE "FileDescription",    "CrossPointer Screen Overlay"
             VALUE "LegalCopyright",     "Crucialmer Copyright (C) 2026"
-            VALUE "OriginalFilename",   "Cross-pointer.exe"
-            VALUE "ProductName",        "Cross-pointer"
+            VALUE "OriginalFilename",   "CrossPointer.exe"
+            VALUE "ProductName",        "CrossPointer"
         END
     END
     BLOCK "VarFileInfo"
