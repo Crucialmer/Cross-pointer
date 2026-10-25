@@ -544,7 +544,7 @@ bool SettingsWindow::SaveValuesFromUI() {
   if (Button_GetCheck(chk_toggle_win_) == BST_CHECKED) t_mod |= MOD_WIN;
   if (Button_GetCheck(chk_toggle_shift_) == BST_CHECKED) t_mod |= MOD_SHIFT;
   const int t_idx = static_cast<int>(SendMessageW(combo_toggle_vk_, CB_GETCURSEL, 0, 0));
-  const unsigned int t_vk = (t_idx >= 0 && t_idx < static_cast<int>(GetKeyList().size())) ? GetKeyList()[t_idx].second : 'H';
+  const unsigned int t_vk = (t_idx >= 0 && t_idx < static_cast<int>(GetKeyList().size())) ? GetKeyList()[t_idx].second : 'E';
 
   // Hotkey - Exit
   unsigned int e_mod = 0;
@@ -553,7 +553,7 @@ bool SettingsWindow::SaveValuesFromUI() {
   if (Button_GetCheck(chk_exit_win_) == BST_CHECKED) e_mod |= MOD_WIN;
   if (Button_GetCheck(chk_exit_shift_) == BST_CHECKED) e_mod |= MOD_SHIFT;
   const int e_idx = static_cast<int>(SendMessageW(combo_exit_vk_, CB_GETCURSEL, 0, 0));
-  const unsigned int e_vk = (e_idx >= 0 && e_idx < static_cast<int>(GetKeyList().size())) ? GetKeyList()[e_idx].second : 'E';
+  const unsigned int e_vk = (e_idx >= 0 && e_idx < static_cast<int>(GetKeyList().size())) ? GetKeyList()[e_idx].second : 'Q';
 
   updated.hotkey_h_s.mod = t_mod;
   updated.hotkey_h_s.vk = t_vk;

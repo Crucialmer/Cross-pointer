@@ -2,7 +2,11 @@
 
 #include <string>
 
-inline constexpr char kDefaultIni[] = R"([Theme]
+inline constexpr char kDefaultIni[] = R"([General]
+# 软件启动时是否立即显示十字辅助线 (1 = 默认显示, 0 = 启动后静默常驻托盘，需按热键呼出)
+ShowOnStartup = 1
+
+[Theme]
 # 1 = 跟随系统自动切换黑白模式 (Auto follow Windows Light/Dark theme)
 # 0 = 关闭自动切换，使用固定颜色
 AutoFollowSystem = 1
@@ -51,22 +55,22 @@ B = 255
 Alpha = 180
 
 [Hide_Show_Hotkey]
-# Supported modifiers: Ctrl, Alt, Win, Shift (comma-separated)
+# Supported modifiers: Shift, Alt, Ctrl, Win (order-independent, comma or plus separated)
 # F1-F24 may be used without modifiers by leaving Mod empty.
-# Invalid modifiers fall back to Ctrl+Alt+Win.
-Mod = Ctrl,Alt,Win
+# Invalid modifiers fall back to Shift+Alt.
+Mod = Shift,Alt
 
 # Letters A-Z; numbers 0-9/Numpad0-Numpad9; F1-F24;
 # Space, Tab, Backspace, Escape, Enter, Delete, Insert; XButton1/2;
 # and common OEM punctuation keys are supported.
-# An invalid value falls back to H.
-VK = H
+# An invalid value falls back to E.
+VK = E
 
 [Exit_Hotkey]
 # Same rules as Hide_Show_Hotkey. An invalid modifier falls back to
-# Ctrl+Alt+Win; an invalid key falls back to E.
-Mod = Ctrl,Alt,Win
-VK = E
+# Shift+Alt; an invalid key falls back to Q.
+Mod = Shift,Alt
+VK = Q
 )";
 
 [[nodiscard]] std::wstring GetConfigPath();

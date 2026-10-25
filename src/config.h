@@ -32,8 +32,8 @@ struct LineConfig {
 };
 
 struct HotkeyConfig {
-  unsigned int mod = 0;
-  unsigned int vk = 0;
+  unsigned int mod = MOD_SHIFT | MOD_ALT;
+  unsigned int vk = 'E';
 
   void Clamp(char mode) noexcept;
 };
@@ -52,8 +52,8 @@ struct Config {
 
   LineConfig horizontal;
   LineConfig vertical;
-  HotkeyConfig hotkey_h_s;
-  HotkeyConfig hotkey_exit;
+  HotkeyConfig hotkey_h_s{MOD_SHIFT | MOD_ALT, 'E'};
+  HotkeyConfig hotkey_exit{MOD_SHIFT | MOD_ALT, 'Q'};
 
   [[nodiscard]] bool Load(const wchar_t* filename);
   [[nodiscard]] bool Save(const wchar_t* filename) const;

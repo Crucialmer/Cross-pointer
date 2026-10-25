@@ -347,12 +347,12 @@ void HotkeyConfig::Clamp(char mode) noexcept {
                          (vk >= VK_OEM_4 && vk <= VK_OEM_8) ||
                          vk == VK_OEM_PLUS || vk == VK_OEM_COMMA ||
                          vk == VK_OEM_MINUS || vk == VK_OEM_PERIOD;
-  if (!valid_key) vk = (mode == 'e') ? L'E' : L'H';
-  if (!function_key && mod == 0) mod = MOD_CONTROL | MOD_ALT | MOD_WIN;
+  if (!valid_key) vk = (mode == 'e') ? L'Q' : L'E';
+  if (!function_key && mod == 0) mod = MOD_SHIFT | MOD_ALT;
 }
 
 unsigned int Config::ParseMod(const wchar_t* text, bool function_key) {
-  constexpr unsigned int kDefault = MOD_CONTROL | MOD_ALT | MOD_WIN;
+  constexpr unsigned int kDefault = MOD_SHIFT | MOD_ALT;
   std::wstring input = TrimAndLower(text != nullptr ? text : L"");
   if (input.empty()) return function_key ? 0U : kDefault;
 
@@ -428,5 +428,5 @@ std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* text, char mode) {
   if (const auto item = key_map.find(key); item != key_map.end()) {
     return {item->second, false};
   }
-  return {static_cast<unsigned int>(mode == 'e' ? L'E' : L'H'), false};
+  return {static_cast<unsigned int>(mode == 'e' ? L'Q' : L'E'), false};
 }
