@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <shellapi.h>
 #include <timeapi.h>
 
 #include <exception>
@@ -8,10 +9,12 @@
 #include "src/config_file_util.h"
 #include "src/crosshair.h"
 #include "src/hotkey.h"
+#include "src/tray.h"
 
 namespace {
 constexpr wchar_t kMutexName[] =
     L"Local\\CrossPointer_F5B6239126A64833BE094D6DC8DC1951";
+constexpr wchar_t kControllerClassName[] = L"CrossPointerControllerClass";
 
 class UniqueHandle {
  public:
@@ -47,7 +50,131 @@ void EnableBestDpiAwareness() noexcept {
       return;
     }
   }
-  SetProcessDPIAware();  // Windows 7/8 兼容回退。
+  SetProcessDPIAware();
+}
+
+std::wstring FormatHotkeyTooltip(const HotkeyConfig& hotkey) {
+  std::wstring tip = L"Cross-pointer (快捷键: ";
+  if ((hotkey.mod & MOD_CONTROL) != 0) tip += L"Ctrl+";
+  if ((hotkey.mod & MOD_ALT) != 0) tip += L"Alt+";
+  if ((hotkey.mod & MOD_WIN) != 0) tip += L"Win+";
+  if ((hotkey.mod & MOD_SHIFT) != 0) tip += L"Shift+";
+
+  if (hotkey.vk >= L'A' && hotkey.vk <= L'Z') {
+    tip += static_cast<wchar_t>(hotkey.vk);
+  } else if (hotkey.vk >= L'0' && hotkey.vk <= L'9') {
+    tip += static_cast<wchar_t>(hotkey.vk);
+  } else if (hotkey.vk >= VK_F1 && hotkey.vk <= VK_F24) {
+    tip += L"F" + std::to_wstring(hotkey.vk - VK_F1 + 1);
+  } else {
+    tip += L"Key";
+  }
+  tip += L")";
+  return tip;
+}
+
+struct AppContext {
+  HINSTANCE instance = nullptr;
+  std::wstring config_path;
+  Config config;
+  CrosshairWindow* crosshair = nullptr;
+  TrayManager tray;
+};
+
+LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
+                                    LPARAM l_param) noexcept {
+  auto* ctx = reinterpret_cast<AppContext*>(
+      GetWindowLongPtrW(window, GWLP_USERDATA));
+
+  switch (message) {
+    case WM_NCCREATE: {
+      const auto* create = reinterpret_cast<const CREATESTRUCTW*>(l_param);
+      ctx = static_cast<AppContext*>(create->lpCreateParams);
+      SetWindowLongPtrW(window, GWLP_USERDATA,
+                        reinterpret_cast<LONG_PTR>(ctx));
+      return TRUE;
+    }
+
+    case WM_TRAYICON: {
+      if (ctx == nullptr) break;
+      if (l_param == WM_RBUTTONUP) {
+        POINT pt = {};
+        GetCursorPos(&pt);
+        ctx->tray.ShowContextMenu(window, pt, ctx->crosshair->IsVisible());
+      } else if (l_param == WM_LBUTTONUP) {
+        PostMessageW(window, WM_COMMAND, IDM_TRAY_TOGGLE, 0);
+      } else if (l_param == WM_LBUTTONDBLCLK) {
+        PostMessageW(window, WM_COMMAND, IDM_TRAY_OPEN_CONFIG, 0);
+      }
+      return 0;
+    }
+
+    case WM_COMMAND: {
+      if (ctx == nullptr) break;
+      const UINT command_id = LOWORD(w_param);
+      switch (command_id) {
+        case IDM_TRAY_TOGGLE: {
+          ctx->crosshair->ToggleVisible();
+          return 0;
+        }
+
+        case IDM_TRAY_OPEN_CONFIG: {
+          ShellExecuteW(nullptr, L"open", ctx->config_path.c_str(), nullptr,
+                        nullptr, SW_SHOW);
+          return 0;
+        }
+
+        case IDM_TRAY_RELOAD: {
+          Config updated;
+          if (!updated.Load(ctx->config_path.c_str())) {
+            MessageBoxW(window, L"配置文件读取失败，请检查语法格式。", L"提示",
+                        MB_OK | MB_ICONWARNING);
+            return 0;
+          }
+          if (!HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
+            HotkeyManager::Register(ctx->config.hotkey_h_s, ctx->config.hotkey_exit);
+            MessageBoxW(window, L"新热键已被占用，已保留原有配置。", L"警告",
+                        MB_OK | MB_ICONWARNING);
+            return 0;
+          }
+          if (ctx->crosshair->ApplyConfig(updated)) {
+            ctx->config = updated;
+            ctx->tray.UpdateTooltip(FormatHotkeyTooltip(ctx->config.hotkey_h_s));
+            MessageBoxW(window, L"配置已成功重新载入并生效！", L"提示",
+                        MB_OK | MB_ICONINFORMATION);
+          }
+          return 0;
+        }
+
+        case IDM_TRAY_ABOUT: {
+          MessageBoxW(
+              window,
+              L"Cross-pointer 1.0 (macOS 26 设计美学版)\n\n"
+              L"• 左键点击托盘：一键切换十字线显隐\n"
+              L"• 双击点击托盘：打开 Cross-pointer.ini 修改快捷键与参数\n"
+              L"• 右键点击托盘：快捷设置与控制菜单\n\n"
+              L"纯绿色运行，零外部残留。\n"
+              L"Copyright © 2026 Crucialmer",
+              L"关于 Cross-pointer", MB_OK | MB_ICONINFORMATION);
+          return 0;
+        }
+
+        case IDM_TRAY_EXIT: {
+          PostQuitMessage(0);
+          return 0;
+        }
+      }
+      break;
+    }
+
+    case WM_DESTROY: {
+      if (ctx != nullptr) {
+        ctx->tray.Remove();
+      }
+      break;
+    }
+  }
+  return DefWindowProcW(window, message, w_param, l_param);
 }
 
 int Run(HINSTANCE instance) {
@@ -58,7 +185,7 @@ int Run(HINSTANCE instance) {
     return 1;
   }
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    MessageBoxW(nullptr, L"Cross-pointer 已经在运行中。", L"提示",
+    MessageBoxW(nullptr, L"Cross-pointer 已经在运行中（可在右下角系统托盘找到）。", L"提示",
                 MB_OK | MB_ICONINFORMATION);
     return 0;
   }
@@ -87,64 +214,69 @@ int Run(HINSTANCE instance) {
     return 1;
   }
 
+  AppContext context;
+  context.instance = instance;
+  context.config_path = config_path;
+  context.config = config;
+  context.crosshair = &crosshair;
+
+  WNDCLASSEXW wc = {sizeof(wc)};
+  wc.lpfnWndProc = ControllerWndProc;
+  wc.hInstance = instance;
+  wc.lpszClassName = kControllerClassName;
+  if (RegisterClassExW(&wc) == 0) return 1;
+
+  HWND controller = CreateWindowExW(
+      0, kControllerClassName, L"CrossPointerController", WS_OVERLAPPED, 0, 0,
+      0, 0, nullptr, nullptr, instance, &context);
+  if (controller == nullptr) {
+    UnregisterClassW(kControllerClassName, instance);
+    return 1;
+  }
+
+  context.tray.Initialize(instance, controller);
+  context.tray.UpdateTooltip(FormatHotkeyTooltip(context.config.hotkey_h_s));
+
   int result = 0;
   MSG message = {};
   while ((result = GetMessageW(&message, nullptr, 0, 0)) > 0) {
-    if (message.message != WM_HOTKEY) {
-      TranslateMessage(&message);
-      DispatchMessageW(&message);
-      continue;
-    }
-
-    if (message.wParam == kExitHotkeyId) {
-      PostQuitMessage(0);
-      continue;
-    }
-    if (message.wParam != kToggleHotkeyId) continue;
-
-    if (crosshair.IsVisible()) {
-      crosshair.ToggleVisible();
-      continue;
-    }
-
-    // 仅在重新显示时热重载。先验证并注册热键，再提交窗口配置。
-    Config updated;
-    if (!updated.Load(config_path.c_str())) {
-      MessageBoxW(nullptr, L"配置文件无效，继续使用上一次有效配置。", L"警告",
-                  MB_OK | MB_ICONWARNING);
-      crosshair.ToggleVisible();
-      continue;
-    }
-    if (!HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
-      if (!HotkeyManager::Register(config.hotkey_h_s, config.hotkey_exit)) {
-        MessageBoxW(nullptr, L"恢复原热键失败，程序将退出。", L"错误",
-                    MB_OK | MB_ICONERROR);
-        return 1;
+    if (message.message == WM_HOTKEY) {
+      if (message.wParam == kExitHotkeyId) {
+        PostQuitMessage(0);
+        continue;
       }
-      MessageBoxW(nullptr, L"新热键不可用，继续使用上一次有效配置。", L"警告",
-                  MB_OK | MB_ICONWARNING);
-      crosshair.ToggleVisible();
-      continue;
-    }
-    if (!crosshair.ApplyConfig(updated)) {
-      const bool hotkeys_restored =
-          HotkeyManager::Register(config.hotkey_h_s, config.hotkey_exit);
-      const bool config_restored = crosshair.ApplyConfig(config);
-      if (!hotkeys_restored || !config_restored) {
-        MessageBoxW(nullptr, L"恢复原配置失败，程序将退出。", L"错误",
-                    MB_OK | MB_ICONERROR);
-        return 1;
+      if (message.wParam == kToggleHotkeyId) {
+        if (crosshair.IsVisible()) {
+          crosshair.ToggleVisible();
+          continue;
+        }
+
+        // 仅在重新显示时热重载
+        Config updated;
+        if (!updated.Load(config_path.c_str())) {
+          crosshair.ToggleVisible();
+          continue;
+        }
+        if (HotkeyManager::Register(updated.hotkey_h_s, updated.hotkey_exit)) {
+          if (crosshair.ApplyConfig(updated)) {
+            context.config = updated;
+            context.tray.UpdateTooltip(FormatHotkeyTooltip(context.config.hotkey_h_s));
+          }
+        }
+        crosshair.ToggleVisible();
+        continue;
       }
-      MessageBoxW(nullptr, L"应用新配置失败，已恢复上一次有效配置。", L"警告",
-                  MB_OK | MB_ICONWARNING);
-      crosshair.ToggleVisible();
-      continue;
     }
-    config = updated;
-    crosshair.ToggleVisible();
+
+    TranslateMessage(&message);
+    DispatchMessageW(&message);
   }
 
   HotkeyManager::UnregisterAll();
+  context.tray.Remove();
+  DestroyWindow(controller);
+  UnregisterClassW(kControllerClassName, instance);
+
   if (result == -1) {
     MessageBoxW(nullptr, L"Windows 消息循环异常终止。", L"错误",
                 MB_OK | MB_ICONERROR);
