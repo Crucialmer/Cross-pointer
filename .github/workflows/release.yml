@@ -28,8 +28,26 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j 8
 
-      - name: Upload Artifact
+      - name: Create Packaged Folder and ZIP
+        shell: pwsh
+        run: |
+          $pkgDir = "CrossPointer"
+          New-Item -ItemType Directory -Path $pkgDir -Force | Out-Null
+          Copy-Item "CrossPointer.exe" -Destination "$pkgDir\CrossPointer.exe"
+          Copy-Item "README.md" -Destination "$pkgDir\README.md"
+          
+          # Add-Type for optimal zip compression
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory($pkgDir, "CrossPointer.zip")
+
+      - name: Upload Artifact Exe
         uses: actions/upload-artifact@v4
         with:
           name: CrossPointer
           path: .\CrossPointer.exe
+
+      - name: Upload Artifact Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: CrossPointer-Zip
+          path: .\CrossPointer.zip
