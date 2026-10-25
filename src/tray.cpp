@@ -26,7 +26,7 @@ bool TrayManager::Initialize(HINSTANCE instance, HWND window) {
   nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
   nid.uCallbackMessage = WM_TRAYICON;
   nid.hIcon = icon_;
-  wcscpy_s(nid.szTip, L"Cross-pointer");
+  wcscpy_s(nid.szTip, L"CrossPointer");
 
   added_ = Shell_NotifyIconW(NIM_ADD, &nid) != FALSE;
   return added_;
@@ -69,7 +69,7 @@ void TrayManager::ShowContextMenu(HWND window, POINT pt,
               L"⚙️ 设置快捷键与外观 (&O)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_RELOAD, L"🔄 重新载入配置 (&R)");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, IDM_TRAY_ABOUT, L"ℹ️ 关于 Cross-pointer (&A)");
+  AppendMenuW(menu, MF_STRING, IDM_TRAY_ABOUT, L"ℹ️ 关于 CrossPointer (&A)");
   AppendMenuW(menu, MF_STRING, IDM_TRAY_EXIT, L"🚪 退出 (&X)");
 
   SetForegroundWindow(window);
