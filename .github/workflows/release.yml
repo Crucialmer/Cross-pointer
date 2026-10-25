@@ -1,0 +1,42 @@
+name: Release 1.0
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup CMake & Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup MSVC
+        uses: step-security/msvc-dev-cmd@v1
+
+      - name: Build Cross-pointer (Release /MT)
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j 8
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0
+          name: Cross-pointer 1.0
+          draft: false
+          prerelease: false
+          body: |
+            ### Cross-pointer 1.0 姝ｅ紡鐗?
+            - **绾豢鑹插崟鏂囦欢**锛歚Cross-pointer.exe
+            - **闆跺婧㈡畫鐣?*锛氭墍鏈夐厤缃枃浠朵弗鏍间繚瀛樺湪绋嬪簭鍚岀洰褰曚笅锛岀粷涓嶅悜 AppData 鎴栨敞鍐岃〃鍐欏叆浠讳綍娈嬬暀銆?            - **鍘熺敓 C++20 + Direct2D**锛氱‖浠跺姞閫熸覆鏌擄紝闈欐€佺紪璇戞棤澶栭儴杩愯搴撲緷璧栵紙/MT锛夈€?          files: |
+            Cross-pointer.exe
