@@ -171,6 +171,10 @@ void CleanupOldExecutable() noexcept {
   DeleteFileW((dir + L"CrossPointer.old.exe").c_str());
   DeleteFileW((dir + L"CrossPointer.new.exe").c_str());
   DeleteFileW((dir + L"CrossPointer.update.zip").c_str());
+  DeleteFileW((dir + L"CrossPointer\\CrossPointer.exe").c_str());
+  DeleteFileW((dir + L"CrossPointer\\README.md").c_str());
+  DeleteFileW((dir + L"CrossPointer\\QuickStart_Guide.txt").c_str());
+  RemoveDirectoryW((dir + L"CrossPointer").c_str());
 }
 
 UpdateResult CheckUpdateSync() noexcept {
@@ -285,6 +289,8 @@ bool PerformDirectUpdate(const UpdateResult& update_info,
       const std::wstring extracted_sub = dir + L"CrossPointer\\CrossPointer.exe";
       if (GetFileAttributesW(extracted_sub.c_str()) != INVALID_FILE_ATTRIBUTES) {
         MoveFileExW(extracted_sub.c_str(), new_exe.c_str(), MOVEFILE_REPLACE_EXISTING);
+        MoveFileExW((dir + L"CrossPointer\\README.md").c_str(), (dir + L"README.md").c_str(), MOVEFILE_REPLACE_EXISTING);
+        MoveFileExW((dir + L"CrossPointer\\QuickStart_Guide.txt").c_str(), (dir + L"QuickStart_Guide.txt").c_str(), MOVEFILE_REPLACE_EXISTING);
         RemoveDirectoryW((dir + L"CrossPointer").c_str());
         download_ok = true;
       }
