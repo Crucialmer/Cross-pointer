@@ -5,7 +5,7 @@
 
 namespace updater {
 
-inline constexpr wchar_t kCurrentVersion[] = L"v1.3";
+inline constexpr wchar_t kCurrentVersion[] = L"v1.4";
 
 struct UpdateResult {
   bool success = false;

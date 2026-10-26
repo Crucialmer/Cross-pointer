@@ -224,7 +224,7 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
         case IDM_TRAY_ABOUT: {
           MessageBoxW(
               window,
-              L"CrossPointer 1.3 (macOS 26 极简设计、单键显隐退出复用与 8K 适配版)\n\n"
+              L"CrossPointer 1.4 (macOS 26 视觉美学重构、无截断宽屏偏好设置与 8K 适配版)\n\n"
               L"• 单键复用：显隐与退出可设为同一热键，未显示时显示，显示时直接退出\n"
               L"• 按键顺序无关：Ctrl/Alt/Win/Shift 任意顺序按下均可毫秒级触发\n"
               L"• macOS 26 偏好设置：分栏胶囊 Tab 切换，消除压缩，极致宽敞美观\n"

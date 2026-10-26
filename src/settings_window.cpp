@@ -26,8 +26,6 @@
 namespace {
 constexpr wchar_t kSettingsClassName[] = L"CrossPointerSettingsClass";
 
-constexpr UINT IDC_TAB_SEGMENTED = 2999;
-
 // Tab 0: 外观尺寸
 constexpr UINT IDC_SLIDER_GAP = 3010;
 constexpr UINT IDC_SLIDER_H_WIDTH = 3011;
@@ -172,12 +170,12 @@ void SettingsWindow::Show(HINSTANCE instance, HWND parent,
   RegisterClassExW(&wc);
 
   const int dpi = GetWindowDpi(parent);
-  RECT win_rc = {0, 0, Scale(620, dpi), Scale(550, dpi)};
+  // macOS 26 宽敞尺寸：680px 宽度 x 615px 高度，彻底告别界面紧绷与文字溢出
+  RECT win_rc = {0, 0, Scale(680, dpi), Scale(615, dpi)};
   AdjustWindowRectEx(&win_rc, WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, FALSE, WS_EX_DLGMODALFRAME);
   const int win_width = win_rc.right - win_rc.left;
   const int win_height = win_rc.bottom - win_rc.top;
 
-  // 居中屏幕显示
   const int screen_w = GetSystemMetrics(SM_CXSCREEN);
   const int screen_h = GetSystemMetrics(SM_CYSCREEN);
   const int x = (screen_w - win_width) / 2;
@@ -191,7 +189,7 @@ void SettingsWindow::Show(HINSTANCE instance, HWND parent,
 
   if (hwnd_ == nullptr) return;
 
-  // macOS 26 质感：启用 DWM 原生圆角与深浅黑白自适应标题栏
+  // macOS 26 质感：启用 DWM 原生圆角与沉浸式深浅自适应标题栏
   const DWMNCRENDERINGPOLICY ncp = DWMNCRP_ENABLED;
   DwmSetWindowAttribute(hwnd_, DWMWA_NCRENDERING_POLICY, &ncp, sizeof(ncp));
   const DWORD round_pref = DWMWCP_ROUND;
@@ -221,24 +219,24 @@ void SettingsWindow::UpdateThemeStyles() {
   if (is_dark_mode_) {
     // macOS 26 深空黑曜石沉浸质感
     br_bg_ = CreateSolidBrush(RGB(28, 28, 30));
-    br_card_ = CreateSolidBrush(RGB(36, 38, 44));
-    br_seg_bg_ = CreateSolidBrush(RGB(42, 44, 52));
+    br_card_ = CreateSolidBrush(RGB(44, 44, 46));
+    br_seg_bg_ = CreateSolidBrush(RGB(58, 58, 60));
     br_tab_active_ = CreateSolidBrush(RGB(0, 122, 255));
     cr_text_ = RGB(245, 245, 247);
-    cr_secondary_ = RGB(158, 165, 175);
-    cr_card_border_ = RGB(56, 60, 72);
-    cr_divider_ = RGB(50, 54, 64);
-    cr_accent_ = RGB(0, 122, 255);
+    cr_secondary_ = RGB(152, 152, 157);
+    cr_card_border_ = RGB(58, 58, 62);
+    cr_divider_ = RGB(58, 58, 62);
+    cr_accent_ = RGB(10, 132, 255);
   } else {
     // macOS 26 纯白通透质感
-    br_bg_ = CreateSolidBrush(RGB(242, 243, 247));
+    br_bg_ = CreateSolidBrush(RGB(242, 242, 247));
     br_card_ = CreateSolidBrush(RGB(255, 255, 255));
-    br_seg_bg_ = CreateSolidBrush(RGB(228, 230, 235));
+    br_seg_bg_ = CreateSolidBrush(RGB(229, 229, 234));
     br_tab_active_ = CreateSolidBrush(RGB(0, 122, 255));
-    cr_text_ = RGB(28, 28, 30);
-    cr_secondary_ = RGB(108, 115, 128);
-    cr_card_border_ = RGB(225, 228, 235);
-    cr_divider_ = RGB(235, 237, 242);
+    cr_text_ = RGB(29, 29, 31);
+    cr_secondary_ = RGB(134, 134, 139);
+    cr_card_border_ = RGB(229, 229, 234);
+    cr_divider_ = RGB(235, 235, 240);
     cr_accent_ = RGB(0, 122, 255);
   }
 }
@@ -259,7 +257,7 @@ void SettingsWindow::CreateControls() {
     return sl;
   };
   auto create_lbl = [&](const wchar_t* text) {
-    return CreateWindowExW(0, L"STATIC", text, WS_CHILD | SS_LEFT,
+    return CreateWindowExW(0, L"STATIC", text, WS_CHILD | SS_CENTER,
                            0, 0, 10, 10, hwnd_, nullptr, instance_, nullptr);
   };
   auto create_btn = [&](const wchar_t* text, UINT id) {
@@ -315,7 +313,7 @@ void SettingsWindow::CreateControls() {
   chk_exit_win_ = create_chk(L"Win", IDC_CHK_EXIT_WIN);
   chk_exit_shift_ = create_chk(L"Shift", IDC_CHK_EXIT_SHIFT);
   combo_exit_vk_ = create_combo(IDC_COMBO_EXIT_VK);
-  btn_sync_hotkey_ = create_btn(L"⚡ 将退出热键设为与显隐相同 (单键显隐+退出)", IDC_BTN_SYNC_HOTKEY);
+  btn_sync_hotkey_ = create_btn(L"⚡ 将退出热键设为与显隐相同 (启用单键显隐+退出智能复用)", IDC_BTN_SYNC_HOTKEY);
 
   // Tab 3: 系统与更新
   chk_show_on_startup_ = create_chk(L"启动软件时显示十字辅助线 (Show on Startup)", IDC_CHK_SHOW_ON_STARTUP);
@@ -324,7 +322,7 @@ void SettingsWindow::CreateControls() {
   chk_auto_check_update_ = create_chk(L"启动时自动静默检查新版本更新 (Silent Update Check)", IDC_CHK_AUTO_UPDATE);
   btn_check_update_ = create_btn(L"🔍 立即检查新版本...", IDC_BTN_CHECK_UPDATE);
 
-  // 底部统一动作栏 (始终可见)
+  // 底部统一动作栏
   btn_save_ = CreateWindowExW(0, L"BUTTON", L"💾 保存并应用",
                               WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
                               0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_BTN_SAVE)),
@@ -373,62 +371,64 @@ void SettingsWindow::LayoutControls(int dpi) {
   }
 
   const int pad_x = Scale(24, dpi);
-  const int card_w = Scale(572, dpi);
+  const int card_w = Scale(632, dpi);
+  const int card_y = Scale(126, dpi);
   const int inner_x = pad_x + Scale(20, dpi);
+  const int inner_w = card_w - Scale(40, dpi);
 
   // Tab 0: 外观尺寸
-  SetWindowPos(slider_gap_, nullptr, inner_x + Scale(260, dpi), Scale(196, dpi), Scale(180, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(lbl_gap_val_, nullptr, inner_x + Scale(448, dpi), Scale(198, dpi), Scale(55, dpi), Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(slider_gap_, nullptr, inner_x + Scale(300, dpi), card_y + Scale(70, dpi), Scale(210, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(lbl_gap_val_, nullptr, inner_x + Scale(520, dpi), card_y + Scale(72, dpi), Scale(68, dpi), Scale(22, dpi), SWP_NOZORDER);
 
-  SetWindowPos(slider_h_width_, nullptr, inner_x + Scale(260, dpi), Scale(261, dpi), Scale(180, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(lbl_h_width_val_, nullptr, inner_x + Scale(448, dpi), Scale(263, dpi), Scale(55, dpi), Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(slider_h_width_, nullptr, inner_x + Scale(300, dpi), card_y + Scale(130, dpi), Scale(210, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(lbl_h_width_val_, nullptr, inner_x + Scale(520, dpi), card_y + Scale(132, dpi), Scale(68, dpi), Scale(22, dpi), SWP_NOZORDER);
 
-  SetWindowPos(slider_v_width_, nullptr, inner_x + Scale(260, dpi), Scale(326, dpi), Scale(180, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(lbl_v_width_val_, nullptr, inner_x + Scale(448, dpi), Scale(328, dpi), Scale(55, dpi), Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(slider_v_width_, nullptr, inner_x + Scale(300, dpi), card_y + Scale(190, dpi), Scale(210, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(lbl_v_width_val_, nullptr, inner_x + Scale(520, dpi), card_y + Scale(192, dpi), Scale(68, dpi), Scale(22, dpi), SWP_NOZORDER);
 
-  SetWindowPos(preview_crosshair_, nullptr, inner_x + Scale(260, dpi), Scale(390, dpi), Scale(260, dpi), Scale(64, dpi), SWP_NOZORDER);
+  SetWindowPos(preview_crosshair_, nullptr, inner_x, card_y + Scale(288, dpi), inner_w, Scale(114, dpi), SWP_NOZORDER);
 
   // Tab 1: 色彩模式
-  SetWindowPos(chk_auto_theme_, nullptr, inner_x, Scale(192, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_theme_, nullptr, inner_x, card_y + Scale(64, dpi), inner_w, Scale(22, dpi), SWP_NOZORDER);
 
-  SetWindowPos(preview_light_, nullptr, inner_x + Scale(260, dpi), Scale(246, dpi), Scale(36, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_color_light_, nullptr, inner_x + Scale(304, dpi), Scale(245, dpi), Scale(110, dpi), Scale(26, dpi), SWP_NOZORDER);
-  SetWindowPos(slider_alpha_light_, nullptr, inner_x + Scale(422, dpi), Scale(246, dpi), Scale(90, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(lbl_alpha_light_val_, nullptr, inner_x + Scale(518, dpi), Scale(248, dpi), Scale(30, dpi), Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(preview_light_, nullptr, inner_x + Scale(270, dpi), card_y + Scale(126, dpi), Scale(36, dpi), Scale(26, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_color_light_, nullptr, inner_x + Scale(314, dpi), card_y + Scale(125, dpi), Scale(104, dpi), Scale(28, dpi), SWP_NOZORDER);
+  SetWindowPos(slider_alpha_light_, nullptr, inner_x + Scale(426, dpi), card_y + Scale(127, dpi), Scale(105, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(lbl_alpha_light_val_, nullptr, inner_x + Scale(538, dpi), card_y + Scale(127, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
 
-  SetWindowPos(preview_dark_, nullptr, inner_x + Scale(260, dpi), Scale(312, dpi), Scale(36, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_color_dark_, nullptr, inner_x + Scale(304, dpi), Scale(311, dpi), Scale(110, dpi), Scale(26, dpi), SWP_NOZORDER);
-  SetWindowPos(slider_alpha_dark_, nullptr, inner_x + Scale(422, dpi), Scale(312, dpi), Scale(90, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(lbl_alpha_dark_val_, nullptr, inner_x + Scale(518, dpi), Scale(314, dpi), Scale(30, dpi), Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(preview_dark_, nullptr, inner_x + Scale(270, dpi), card_y + Scale(180, dpi), Scale(36, dpi), Scale(26, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_color_dark_, nullptr, inner_x + Scale(314, dpi), card_y + Scale(179, dpi), Scale(104, dpi), Scale(28, dpi), SWP_NOZORDER);
+  SetWindowPos(slider_alpha_dark_, nullptr, inner_x + Scale(426, dpi), card_y + Scale(181, dpi), Scale(105, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(lbl_alpha_dark_val_, nullptr, inner_x + Scale(538, dpi), card_y + Scale(181, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
 
-  // Tab 2: 快捷键 (按键顺序无关，单键复用显隐退出)
+  // Tab 2: 快捷键 (优雅对齐修饰键与按键下拉列表)
   const int k_x = inner_x + Scale(220, dpi);
-  SetWindowPos(chk_toggle_ctrl_, nullptr, k_x, Scale(196, dpi), Scale(52, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_toggle_alt_, nullptr, k_x + Scale(54, dpi), Scale(196, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_toggle_win_, nullptr, k_x + Scale(106, dpi), Scale(196, dpi), Scale(52, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_toggle_shift_, nullptr, k_x + Scale(160, dpi), Scale(196, dpi), Scale(58, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(combo_toggle_vk_, nullptr, k_x + Scale(224, dpi), Scale(194, dpi), Scale(84, dpi), Scale(200, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_toggle_ctrl_, nullptr, k_x, card_y + Scale(70, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_toggle_alt_, nullptr, k_x + Scale(52, dpi), card_y + Scale(70, dpi), Scale(48, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_toggle_win_, nullptr, k_x + Scale(102, dpi), card_y + Scale(70, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_toggle_shift_, nullptr, k_x + Scale(154, dpi), card_y + Scale(70, dpi), Scale(56, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(combo_toggle_vk_, nullptr, k_x + Scale(220, dpi), card_y + Scale(68, dpi), Scale(145, dpi), Scale(200, dpi), SWP_NOZORDER);
 
-  SetWindowPos(chk_exit_ctrl_, nullptr, k_x, Scale(260, dpi), Scale(52, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_exit_alt_, nullptr, k_x + Scale(54, dpi), Scale(260, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_exit_win_, nullptr, k_x + Scale(106, dpi), Scale(260, dpi), Scale(52, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_exit_shift_, nullptr, k_x + Scale(160, dpi), Scale(260, dpi), Scale(58, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(combo_exit_vk_, nullptr, k_x + Scale(224, dpi), Scale(258, dpi), Scale(84, dpi), Scale(200, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_exit_ctrl_, nullptr, k_x, card_y + Scale(126, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_exit_alt_, nullptr, k_x + Scale(52, dpi), card_y + Scale(126, dpi), Scale(48, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_exit_win_, nullptr, k_x + Scale(102, dpi), card_y + Scale(126, dpi), Scale(50, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_exit_shift_, nullptr, k_x + Scale(154, dpi), card_y + Scale(126, dpi), Scale(56, dpi), Scale(24, dpi), SWP_NOZORDER);
+  SetWindowPos(combo_exit_vk_, nullptr, k_x + Scale(220, dpi), card_y + Scale(124, dpi), Scale(145, dpi), Scale(200, dpi), SWP_NOZORDER);
 
-  SetWindowPos(btn_sync_hotkey_, nullptr, inner_x + Scale(220, dpi), Scale(292, dpi), Scale(288, dpi), Scale(28, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_sync_hotkey_, nullptr, inner_x, card_y + Scale(178, dpi), inner_w, Scale(32, dpi), SWP_NOZORDER);
 
-  // Tab 3: 系统与更新
-  SetWindowPos(chk_show_on_startup_, nullptr, inner_x, Scale(186, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_auto_dpi_, nullptr, inner_x, Scale(242, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_autostart_, nullptr, inner_x, Scale(298, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(chk_auto_check_update_, nullptr, inner_x, Scale(354, dpi), card_w - Scale(40, dpi), Scale(24, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_check_update_, nullptr, inner_x, Scale(414, dpi), Scale(160, dpi), Scale(34, dpi), SWP_NOZORDER);
+  // Tab 3: 系统与更新 (每个复选框高度为20px，严格物理隔离副标题与文本，彻底消除重叠截断)
+  SetWindowPos(chk_show_on_startup_, nullptr, inner_x, card_y + Scale(64, dpi), inner_w, Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_dpi_, nullptr, inner_x, card_y + Scale(124, dpi), inner_w, Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_autostart_, nullptr, inner_x, card_y + Scale(184, dpi), inner_w, Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(chk_auto_check_update_, nullptr, inner_x, card_y + Scale(244, dpi), inner_w, Scale(20, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_check_update_, nullptr, inner_x, card_y + Scale(314, dpi), Scale(160, dpi), Scale(36, dpi), SWP_NOZORDER);
 
-  // 底部统一动作栏 (Y = 488px)
-  const int btn_y = Scale(488, dpi);
-  SetWindowPos(btn_save_, nullptr, pad_x, btn_y, Scale(140, dpi), Scale(38, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_defaults_, nullptr, pad_x + Scale(155, dpi), btn_y, Scale(115, dpi), Scale(38, dpi), SWP_NOZORDER);
-  SetWindowPos(btn_close_, nullptr, pad_x + card_w - Scale(90, dpi), btn_y, Scale(90, dpi), Scale(38, dpi), SWP_NOZORDER);
+  // 底部统一动作栏 (Y = 556px, Height = 38px)
+  const int btn_y = Scale(556, dpi);
+  SetWindowPos(btn_save_, nullptr, pad_x, btn_y, Scale(150, dpi), Scale(38, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_defaults_, nullptr, pad_x + Scale(165, dpi), btn_y, Scale(125, dpi), Scale(38, dpi), SWP_NOZORDER);
+  SetWindowPos(btn_close_, nullptr, pad_x + card_w - Scale(100, dpi), btn_y, Scale(100, dpi), Scale(38, dpi), SWP_NOZORDER);
 }
 
 void SettingsWindow::UpdateTabVisibility() {
@@ -627,15 +627,33 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       InvalidateRect(hwnd, nullptr, TRUE);
       return 0;
     }
+    case WM_SETCURSOR: {
+      HWND hit_hwnd = reinterpret_cast<HWND>(wp);
+      if (hit_hwnd == hwnd) {
+        POINT pt;
+        GetCursorPos(&pt);
+        ScreenToClient(hwnd, &pt);
+        const int dpi = GetWindowDpi(hwnd);
+        const int seg_x = Scale(24, dpi);
+        const int seg_y = Scale(80, dpi);
+        const int seg_w = Scale(632, dpi);
+        const int seg_h = Scale(36, dpi);
+        if (pt.x >= seg_x && pt.x <= seg_x + seg_w && pt.y >= seg_y && pt.y <= seg_y + seg_h) {
+          SetCursor(LoadCursorW(nullptr, IDC_HAND));
+          return TRUE;
+        }
+      }
+      break;
+    }
     case WM_LBUTTONDOWN: {
       const int dpi = GetWindowDpi(hwnd);
       const int mouse_x = GET_X_LPARAM(lp);
       const int mouse_y = GET_Y_LPARAM(lp);
 
       const int seg_x = Scale(24, dpi);
-      const int seg_y = Scale(82, dpi);
-      const int seg_w = Scale(572, dpi);
-      const int seg_h = Scale(34, dpi);
+      const int seg_y = Scale(80, dpi);
+      const int seg_w = Scale(632, dpi);
+      const int seg_h = Scale(36, dpi);
 
       if (mouse_x >= seg_x && mouse_x <= seg_x + seg_w &&
           mouse_y >= seg_y && mouse_y <= seg_y + seg_h) {
@@ -649,7 +667,6 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       break;
     }
     case WM_HSCROLL: {
-      // 实时更新数值标签并刷新预览
       if (reinterpret_cast<HWND>(lp) == slider_gap_) {
         const int val = static_cast<int>(SendMessageW(slider_gap_, TBM_GETPOS, 0, 0));
         SetWindowTextW(lbl_gap_val_, (std::to_wstring(val) + L" px").c_str());
@@ -678,7 +695,6 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_COMMAND: {
       const UINT id = LOWORD(wp);
       if (id == IDC_BTN_SYNC_HOTKEY) {
-        // 一键将退出热键同步为显隐热键 (单键复用)
         Button_SetCheck(chk_exit_ctrl_, Button_GetCheck(chk_toggle_ctrl_));
         Button_SetCheck(chk_exit_alt_, Button_GetCheck(chk_toggle_alt_));
         Button_SetCheck(chk_exit_win_, Button_GetCheck(chk_toggle_win_));
@@ -706,7 +722,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         return 0;
       }
       if (id == IDC_BTN_DEFAULTS) {
-        config_ = Config(); // 恢复默认结构体
+        config_ = Config();
         temp_light_color_ = config_.light_theme;
         temp_dark_color_ = config_.dark_theme;
         LoadValuesToUI();
@@ -760,35 +776,54 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         return TRUE;
       }
       if (dis->CtlID == IDC_PREVIEW_CROSSHAIR) {
-        // 实时尺寸十字线预览
-        HBRUSH bg_br = CreateSolidBrush(is_dark_mode_ ? RGB(20, 22, 26) : RGB(236, 238, 242));
+        const RECT& rc = dis->rcItem;
+        HBRUSH bg_br = CreateSolidBrush(is_dark_mode_ ? RGB(20, 22, 26) : RGB(244, 246, 250));
         HPEN border_pen = CreatePen(PS_SOLID, 1, cr_card_border_);
-        FillRect(dis->hDC, &dis->rcItem, bg_br);
-        FrameRect(dis->hDC, &dis->rcItem, bg_br);
+        HBRUSH old_br = SelectBrush(dis->hDC, bg_br);
+        HPEN old_pen = SelectPen(dis->hDC, border_pen);
+        RoundRect(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, 8, 8);
 
         const int gap = static_cast<int>(SendMessageW(slider_gap_, TBM_GETPOS, 0, 0));
         const int h_w = static_cast<int>(SendMessageW(slider_h_width_, TBM_GETPOS, 0, 0));
         const int v_w = static_cast<int>(SendMessageW(slider_v_width_, TBM_GETPOS, 0, 0));
 
-        const int cx = (dis->rcItem.left + dis->rcItem.right) / 2;
-        const int cy = (dis->rcItem.top + dis->rcItem.bottom) / 2;
+        const int cx = (rc.left + rc.right) / 2;
+        const int cy = (rc.top + rc.bottom) / 2;
 
-        COLORREF cross_color = is_dark_mode_ ? RGB(0, 225, 255) : RGB(0, 140, 255);
+        // 微弱网格辅助对齐虚线
+        HPEN grid_pen = CreatePen(PS_DOT, 1, is_dark_mode_ ? RGB(36, 42, 52) : RGB(220, 225, 235));
+        SelectPen(dis->hDC, grid_pen);
+        MoveToEx(dis->hDC, rc.left + 24, cy, nullptr);
+        LineTo(dis->hDC, rc.right - 24, cy);
+        MoveToEx(dis->hDC, cx, rc.top + 10, nullptr);
+        LineTo(dis->hDC, cx, rc.bottom - 10);
+        DeleteObject(grid_pen);
+
+        COLORREF cross_color = is_dark_mode_ ? RGB(0, 225, 255) : RGB(0, 122, 255);
         HBRUSH cross_br = CreateSolidBrush(cross_color);
 
         // 水平左臂与右臂
         const int half_gap = gap / 2;
-        RECT rc_hl = {dis->rcItem.left + 10, cy - h_w / 2, cx - half_gap, cy - h_w / 2 + std::max(1, h_w)};
-        RECT rc_hr = {cx + half_gap, cy - h_w / 2, dis->rcItem.right - 10, cy - h_w / 2 + std::max(1, h_w)};
+        RECT rc_hl = {rc.left + 24, cy - h_w / 2, cx - half_gap, cy - h_w / 2 + std::max(1, h_w)};
+        RECT rc_hr = {cx + half_gap, cy - h_w / 2, rc.right - 24, cy - h_w / 2 + std::max(1, h_w)};
         if (rc_hl.right > rc_hl.left) FillRect(dis->hDC, &rc_hl, cross_br);
         if (rc_hr.right > rc_hr.left) FillRect(dis->hDC, &rc_hr, cross_br);
 
         // 垂直上臂与下臂
-        RECT rc_vt = {cx - v_w / 2, dis->rcItem.top + 6, cx - v_w / 2 + std::max(1, v_w), cy - half_gap};
-        RECT rc_vb = {cx - v_w / 2, cy + half_gap, cx - v_w / 2 + std::max(1, v_w), dis->rcItem.bottom - 6};
+        RECT rc_vt = {cx - v_w / 2, rc.top + 12, cx - v_w / 2 + std::max(1, v_w), cy - half_gap};
+        RECT rc_vb = {cx - v_w / 2, cy + half_gap, cx - v_w / 2 + std::max(1, v_w), rc.bottom - 12};
         if (rc_vt.bottom > rc_vt.top) FillRect(dis->hDC, &rc_vt, cross_br);
         if (rc_vb.bottom > rc_vb.top) FillRect(dis->hDC, &rc_vb, cross_br);
 
+        // 预览底端标注
+        SetBkMode(dis->hDC, TRANSPARENT);
+        SetTextColor(dis->hDC, cr_secondary_);
+        SelectFont(dis->hDC, font_small_);
+        RECT note_rc = {rc.right - 140, rc.bottom - 24, rc.right - 12, rc.bottom - 4};
+        DrawTextW(dis->hDC, L"Direct2D 仿真预览", -1, &note_rc, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+
+        SelectBrush(dis->hDC, old_br);
+        SelectPen(dis->hDC, old_pen);
         DeleteObject(bg_br);
         DeleteObject(border_pen);
         DeleteObject(cross_br);
@@ -810,12 +845,13 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       RECT client = {};
       GetClientRect(hwnd, &client);
 
-      // 1. 全局背景
+      // 1. 全局窗口背景 (macOS 26 系统浅灰/黑曜石底色)
       FillRect(hdc, &client, br_bg_);
 
-      // 2. Hero Header (Top 70px)
+      // 2. Hero Header 区域 (高度约 70px)
+      const int pad_x = Scale(24, dpi);
       const int icon_size = Scale(44, dpi);
-      const int icon_x = Scale(24, dpi);
+      const int icon_x = pad_x;
       const int icon_y = Scale(16, dpi);
       const int icon_r = Scale(10, dpi);
 
@@ -825,7 +861,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       HPEN old_pen = SelectPen(hdc, icon_pen);
       RoundRect(hdc, icon_x, icon_y, icon_x + icon_size, icon_y + icon_size, icon_r, icon_r);
 
-      // 图标内部激光十字微缩图
+      // 图标内部 macOS 激光十字线微缩光标
       HPEN cyan_pen = CreatePen(PS_SOLID, std::max(2, Scale(3, dpi)), RGB(0, 225, 255));
       SelectPen(hdc, cyan_pen);
       const int icx = icon_x + icon_size / 2;
@@ -845,22 +881,26 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       DeleteObject(icon_br);
       DeleteObject(icon_pen);
 
-      // 标题与副标题
+      // 标题与副标题 (使用 DrawTextW -1 自动计算长度，彻底消除截断)
       SetBkMode(hdc, TRANSPARENT);
       SelectFont(hdc, font_title_);
       SetTextColor(hdc, cr_text_);
-      TextOutW(hdc, icon_x + icon_size + Scale(14, dpi), icon_y + Scale(2, dpi), L"CrossPointer 偏好设置", 14);
+      RECT title_rc = {icon_x + icon_size + Scale(14, dpi), icon_y + Scale(1, dpi),
+                       client.right - Scale(140, dpi), icon_y + Scale(24, dpi)};
+      DrawTextW(hdc, L"CrossPointer 偏好设置", -1, &title_rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
       SelectFont(hdc, font_small_);
       SetTextColor(hdc, cr_secondary_);
-      TextOutW(hdc, icon_x + icon_size + Scale(14, dpi), icon_y + Scale(25, dpi), L"v1.3 • macOS 26 极简屏幕十字辅助线 • 纯绿色便携", 28);
+      RECT subtitle_rc = {icon_x + icon_size + Scale(14, dpi), icon_y + Scale(24, dpi),
+                          client.right - Scale(140, dpi), icon_y + Scale(44, dpi)};
+      DrawTextW(hdc, L"v1.4 • macOS 26 极简屏幕十字辅助线 • 纯绿色便携", -1, &subtitle_rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
       // 右侧运行状态胶囊 Badge
-      const int badge_w = Scale(98, dpi);
-      const int badge_h = Scale(24, dpi);
-      const int badge_x = client.right - Scale(24, dpi) - badge_w;
+      const int badge_w = Scale(110, dpi);
+      const int badge_h = Scale(26, dpi);
+      const int badge_x = client.right - pad_x - badge_w;
       const int badge_y = icon_y + Scale(9, dpi);
-      HBRUSH badge_br = CreateSolidBrush(is_dark_mode_ ? RGB(28, 44, 36) : RGB(232, 248, 238));
+      HBRUSH badge_br = CreateSolidBrush(is_dark_mode_ ? RGB(24, 44, 32) : RGB(232, 248, 238));
       HPEN badge_pen = CreatePen(PS_SOLID, 1, RGB(52, 199, 89));
       SelectBrush(hdc, badge_br);
       SelectPen(hdc, badge_pen);
@@ -872,19 +912,21 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
       SelectFont(hdc, font_small_);
       SetTextColor(hdc, RGB(52, 199, 89));
-      TextOutW(hdc, badge_x + Scale(11, dpi), badge_y + Scale(4, dpi), L"● 运行中 (1ms)", 10);
+      RECT badge_rc = {badge_x, badge_y, badge_x + badge_w, badge_y + badge_h};
+      DrawTextW(hdc, L"● 运行中 (1ms)", -1, &badge_rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
-      // Header 分割线
+      // Header 底部分割线
       HPEN div_pen = CreatePen(PS_SOLID, 1, cr_divider_);
       SelectPen(hdc, div_pen);
-      MoveToEx(hdc, Scale(24, dpi), Scale(70, dpi), nullptr);
-      LineTo(hdc, client.right - Scale(24, dpi), Scale(70, dpi));
+      MoveToEx(hdc, pad_x, Scale(70, dpi), nullptr);
+      LineTo(hdc, client.right - pad_x, Scale(70, dpi));
 
-      // 3. Segmented Control Capsule Tab Bar (Y: 82px, Height: 34px)
-      const int seg_x = Scale(24, dpi);
-      const int seg_y = Scale(82, dpi);
-      const int seg_w = Scale(572, dpi);
-      const int seg_h = Scale(34, dpi);
+      // 3. Segmented Control Capsule Tab Bar (Y: 80px, Height: 36px)
+      const int seg_x = pad_x;
+      const int seg_y = Scale(80, dpi);
+      const int card_w = Scale(632, dpi);
+      const int seg_w = card_w;
+      const int seg_h = Scale(36, dpi);
       const int seg_r = Scale(8, dpi);
 
       SelectBrush(hdc, br_seg_bg_);
@@ -893,7 +935,7 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       RoundRect(hdc, seg_x, seg_y, seg_x + seg_w, seg_y + seg_h, seg_r, seg_r);
       DeleteObject(null_pen);
 
-      const wchar_t* tab_titles[4] = {L"外观尺寸", L"色彩模式", L"全局快捷键", L"系统与更新"};
+      const wchar_t* tab_titles[4] = {L"🎯 外观尺寸", L"🎨 色彩模式", L"⌨️ 全局快捷键", L"🚀 系统与更新"};
       const int tab_item_w = seg_w / 4;
 
       for (int i = 0; i < 4; i++) {
@@ -917,14 +959,13 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
 
         RECT trc = {cur_tx, cur_ty, cur_tx + cur_tw, cur_ty + cur_th};
-        DrawTextW(hdc, tab_titles[i], -1, &trc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        DrawTextW(hdc, tab_titles[i], -1, &trc, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
       }
 
-      // 4. Main Inset Grouped Card (Y: 126px, Height: 348px)
-      const int card_x = Scale(24, dpi);
+      // 4. Main Inset Grouped Card (Y: 126px, Height: 416px)
+      const int card_x = pad_x;
       const int card_y = Scale(126, dpi);
-      const int card_w = Scale(572, dpi);
-      const int card_h = Scale(348, dpi);
+      const int card_h = Scale(416, dpi);
       const int card_r = Scale(12, dpi);
 
       SelectBrush(hdc, br_card_);
@@ -935,95 +976,109 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       SelectPen(hdc, old_pen);
       DeleteObject(card_pen);
 
-      // Card 内部文字与排版
+      // Card 内部排版边界
       const int inner_x = card_x + Scale(20, dpi);
       const int inner_w = card_w - Scale(40, dpi);
 
       SelectPen(hdc, div_pen);
 
+      auto draw_row_label = [&](const wchar_t* title, const wchar_t* sub, int y_title, int y_sub, int max_w) {
+        SelectFont(hdc, font_bold_);
+        SetTextColor(hdc, cr_text_);
+        RECT r_title = {inner_x, y_title, inner_x + max_w, y_title + Scale(20, dpi)};
+        DrawTextW(hdc, title, -1, &r_title, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+        SelectFont(hdc, font_small_);
+        SetTextColor(hdc, cr_secondary_);
+        RECT r_sub = {inner_x, y_sub, inner_x + max_w, y_sub + Scale(34, dpi)};
+        DrawTextW(hdc, sub, -1, &r_sub, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+      };
+
       if (current_tab_ == 0) {
         // TAB 0: 外观尺寸
         SelectFont(hdc, font_card_title_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(18, dpi), L"屏幕十字线外观与物理尺寸", 12);
+        RECT head_rc = {inner_x, card_y + Scale(16, dpi), inner_x + inner_w, card_y + Scale(36, dpi)};
+        DrawTextW(hdc, L"屏幕十字线外观与物理尺寸", -1, &head_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(40, dpi), L"针对高刷新率与高 PPI 屏幕调优，调整滑块即时生效", 24);
+        RECT sub_rc = {inner_x, card_y + Scale(38, dpi), inner_x + inner_w, card_y + Scale(58, dpi)};
+        DrawTextW(hdc, L"针对高刷新率与高 PPI 屏幕调优，调整滑块即刻生效并联动下方预览", -1, &sub_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
 
         // Row 1: Gap
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(70, dpi), L"中心空隙留白 (Gap)", 12);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(90, dpi), L"中心留白距离，0 为十字线无间隙直接相交，推荐 16 px", 28);
-        MoveToEx(hdc, inner_x, card_y + Scale(122, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(122, dpi));
+        draw_row_label(L"中心空隙留白 (Gap)",
+                       L"中心留白距离，0 为十字线无间隙直接相交，推荐 16 px",
+                       card_y + Scale(68, dpi), card_y + Scale(88, dpi), Scale(285, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(116, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(116, dpi));
 
         // Row 2: Horizontal Width
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(135, dpi), L"水平横线粗细 (Width)", 14);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(155, dpi), L"水平横向贯穿辅线的笔画宽度，推荐 2 px", 20);
-        MoveToEx(hdc, inner_x, card_y + Scale(187, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(187, dpi));
+        draw_row_label(L"水平横线粗细 (Width)",
+                       L"水平横向贯穿辅线的笔画宽度，推荐 2 px",
+                       card_y + Scale(128, dpi), card_y + Scale(148, dpi), Scale(285, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(176, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(176, dpi));
 
         // Row 3: Vertical Width
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(200, dpi), L"垂直竖线粗细 (Width)", 14);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(220, dpi), L"垂直纵向贯穿辅线的笔画宽度，推荐 2 px", 20);
-        MoveToEx(hdc, inner_x, card_y + Scale(252, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(252, dpi));
+        draw_row_label(L"垂直竖线粗细 (Width)",
+                       L"垂直纵向贯穿辅线的笔画宽度，推荐 2 px",
+                       card_y + Scale(188, dpi), card_y + Scale(208, dpi), Scale(285, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(236, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(236, dpi));
 
-        // Row 4: Real-time Preview Box
+        // Row 4: Real-time Preview Header
         SelectFont(hdc, font_bold_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(266, dpi), L"实时十字线尺寸预览效果", 11);
+        RECT p_title = {inner_x, card_y + Scale(246, dpi), inner_x + inner_w, card_y + Scale(266, dpi)};
+        DrawTextW(hdc, L"实时十字线尺寸与空隙预览效果", -1, &p_title, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(288, dpi), L"即时联动当前水平粗细、垂直粗细与中心留白", 20);
+        RECT p_sub = {inner_x, card_y + Scale(266, dpi), inner_x + inner_w, card_y + Scale(284, dpi)};
+        DrawTextW(hdc, L"即时联动当前水平粗细、垂直粗细与中心留白设置", -1, &p_sub, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
       } else if (current_tab_ == 1) {
         // TAB 1: 色彩模式
         SelectFont(hdc, font_card_title_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(18, dpi), L"主题自适应色彩与不透明度", 12);
+        RECT head_rc = {inner_x, card_y + Scale(16, dpi), inner_x + inner_w, card_y + Scale(36, dpi)};
+        DrawTextW(hdc, L"主题自适应色彩与不透明度", -1, &head_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(40, dpi), L"支持浅色与深色双调色盘，跟随 Windows 模式无缝自动切换", 27);
+        RECT sub_rc = {inner_x, card_y + Scale(38, dpi), inner_x + inner_w, card_y + Scale(58, dpi)};
+        DrawTextW(hdc, L"支持浅色与深色独立调色盘，跟随 Windows 模式无缝自动切换", -1, &sub_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
 
-        MoveToEx(hdc, inner_x, card_y + Scale(100, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(100, dpi));
-
-        // Section 1: 浅色模式
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(116, dpi), L"浅色模式专属色彩", 8);
+        // Row 1: Follow Windows Subtitle (严格放在复选框下方的安全区域)
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(138, dpi), L"用于浅色桌面或浅色办公文档背景下的高对比色彩", 22);
+        RECT auto_sub_rc = {inner_x + Scale(24, dpi), card_y + Scale(88, dpi), inner_x + inner_w, card_y + Scale(108, dpi)};
+        DrawTextW(hdc, L"毫秒级响应系统深浅主题切换广播，无需重启即可无缝自适应", -1, &auto_sub_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
 
-        MoveToEx(hdc, inner_x, card_y + Scale(172, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(172, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(114, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(114, dpi));
 
-        // Section 2: 深色模式
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(186, dpi), L"深色模式专属色彩", 8);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(208, dpi), L"用于深色 IDE、暗黑终端或夜间环境下的舒适荧光青蓝色彩", 26);
+        // Row 2: 浅色模式
+        draw_row_label(L"浅色模式专属色彩",
+                       L"用于明亮壁纸或白底文档下的高对比色彩",
+                       card_y + Scale(122, dpi), card_y + Scale(142, dpi), Scale(255, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(168, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(168, dpi));
 
-        // Section 3: Inset 技巧卡片
-        const int tip_y = card_y + Scale(242, dpi);
-        const int tip_h = Scale(88, dpi);
+        // Row 3: 深色模式
+        draw_row_label(L"深色模式专属色彩",
+                       L"用于深色 IDE、暗黑终端或夜间环境下的舒适荧光青蓝",
+                       card_y + Scale(176, dpi), card_y + Scale(196, dpi), Scale(255, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(222, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(222, dpi));
+
+        // Inset 调色建议卡片
+        const int tip_y = card_y + Scale(234, dpi);
+        const int tip_h = Scale(168, dpi);
         RECT tip_rc = {inner_x, tip_y, inner_x + inner_w, tip_y + tip_h};
-        HBRUSH tip_br = CreateSolidBrush(is_dark_mode_ ? RGB(28, 32, 40) : RGB(244, 246, 250));
-        HPEN tip_pen = CreatePen(PS_SOLID, 1, is_dark_mode_ ? RGB(48, 56, 70) : RGB(220, 225, 235));
+        HBRUSH tip_br = CreateSolidBrush(is_dark_mode_ ? RGB(28, 38, 50) : RGB(240, 244, 252));
+        HPEN tip_pen = CreatePen(PS_SOLID, 1, is_dark_mode_ ? RGB(45, 65, 88) : RGB(205, 220, 242));
         SelectBrush(hdc, tip_br);
         SelectPen(hdc, tip_pen);
         RoundRect(hdc, tip_rc.left, tip_rc.top, tip_rc.right, tip_rc.bottom, Scale(8, dpi), Scale(8, dpi));
@@ -1034,43 +1089,49 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         SelectFont(hdc, font_bold_);
         SetTextColor(hdc, cr_accent_);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(12, dpi), L"💡 调色技巧与专业建议", 11);
+        RECT tip_h_rc = {inner_x + Scale(16, dpi), tip_y + Scale(12, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(32, dpi)};
+        DrawTextW(hdc, L"💡 调色技巧与专业建议", -1, &tip_h_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(34, dpi),
-                 L"• 浅色模式推荐使用饱和度适中的深天蓝或石墨灰，不刺眼且易于审阅对齐。", 34);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(54, dpi),
-                 L"• 深色模式推荐使用 macOS Azure 激光青（#00E1FF），配合 180 透明度带来极佳对齐感。", 42);
+        RECT tip_l1 = {inner_x + Scale(16, dpi), tip_y + Scale(38, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(76, dpi)};
+        DrawTextW(hdc, L"• 浅色模式推荐使用饱和度适中的深天蓝（#0066E6）或石墨黑灰，白底文档清晰锐利不刺眼。", -1, &tip_l1, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+
+        RECT tip_l2 = {inner_x + Scale(16, dpi), tip_y + Scale(78, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(116, dpi)};
+        DrawTextW(hdc, L"• 深色模式推荐使用通透的 macOS Azure 激光青（#00D2FF），配合 180 透明度对齐聚焦极佳。", -1, &tip_l2, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+
+        RECT tip_l3 = {inner_x + Scale(16, dpi), tip_y + Scale(118, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(156, dpi)};
+        DrawTextW(hdc, L"• 右侧滑块支持 20 ~ 255 透明度精确调节：数值越低越通透，避免长时间审阅遮挡背景文字。", -1, &tip_l3, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+
       } else if (current_tab_ == 2) {
         // TAB 2: 全局快捷键
         SelectFont(hdc, font_card_title_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(18, dpi), L"系统级全局快捷键与单键复用", 13);
+        RECT head_rc = {inner_x, card_y + Scale(16, dpi), inner_x + inner_w, card_y + Scale(36, dpi)};
+        DrawTextW(hdc, L"系统级全局快捷键与单键复用", -1, &head_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(40, dpi), L"支持无缝按键顺序识别，以及同一快捷键复用兼具显示与退出", 26);
+        RECT sub_rc = {inner_x, card_y + Scale(38, dpi), inner_x + inner_w, card_y + Scale(58, dpi)};
+        DrawTextW(hdc, L"支持按键顺序无关识别，以及同一快捷键复用兼具显示与退出", -1, &sub_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
 
         // Row 1: 显隐
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(70, dpi), L"显隐十字线热键", 7);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(92, dpi), L"随时在所有窗口上显示或隐藏辅助线", 16);
-        MoveToEx(hdc, inner_x, card_y + Scale(122, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(122, dpi));
+        draw_row_label(L"显隐十字线热键",
+                       L"随时在所有窗口上呼出或隐藏辅助线",
+                       card_y + Scale(64, dpi), card_y + Scale(84, dpi), Scale(205, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(112, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(112, dpi));
 
         // Row 2: 退出
-        SelectFont(hdc, font_bold_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(134, dpi), L"退出程序热键", 6);
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(156, dpi), L"快捷退出 CrossPointer 进程，可设为与显隐相同", 22);
+        draw_row_label(L"退出程序热键",
+                       L"快捷退出 CrossPointer，可设为与显隐相同",
+                       card_y + Scale(120, dpi), card_y + Scale(140, dpi), Scale(205, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(168, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(168, dpi));
 
-        // Section 3: Callout 升级说明卡片
-        const int tip_y = card_y + Scale(204, dpi);
-        const int tip_h = Scale(128, dpi);
+        // Inset 快捷键特性说明卡片
+        const int tip_y = card_y + Scale(222, dpi);
+        const int tip_h = Scale(180, dpi);
         RECT tip_rc = {inner_x, tip_y, inner_x + inner_w, tip_y + tip_h};
         HBRUSH tip_br = CreateSolidBrush(is_dark_mode_ ? RGB(26, 36, 48) : RGB(236, 244, 255));
         HPEN tip_pen = CreatePen(PS_SOLID, 1, cr_accent_);
@@ -1084,68 +1145,81 @@ LRESULT SettingsWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         SelectFont(hdc, font_bold_);
         SetTextColor(hdc, cr_accent_);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(10, dpi), L"✨ 全局快捷键两大核心升级 (v1.3 新增)", 20);
+        RECT tip_h_rc = {inner_x + Scale(16, dpi), tip_y + Scale(12, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(32, dpi)};
+        DrawTextW(hdc, L"✨ 全局快捷键核心升级特性", -1, &tip_h_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+        SelectFont(hdc, font_bold_);
+        SetTextColor(hdc, cr_text_);
+        RECT f1_title = {inner_x + Scale(16, dpi), tip_y + Scale(36, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(54, dpi)};
+        DrawTextW(hdc, L"1. 单快捷键智能复用 (Show/Hide + Exit Toggle)：", -1, &f1_title, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
 
         SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(32, dpi),
-                 L"1. 单快捷键智能复用 (Show/Hide + Exit Toggle)：", 29);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(28, dpi), tip_y + Scale(50, dpi),
-                 L"当显隐与退出设为相同时：未显示时按键显示十字线；已显示时按键退出程序。", 35);
-        TextOutW(hdc, inner_x + Scale(28, dpi), tip_y + Scale(68, dpi),
-                 L"无需记忆多个快捷键，只需一键即可兼顾显示与退出！", 23);
+        RECT f1_body = {inner_x + Scale(30, dpi), tip_y + Scale(56, dpi), inner_x + inner_w - Scale(20, dpi), tip_y + Scale(100, dpi)};
+        DrawTextW(hdc, L"当显隐与退出设为相同时：未显示时按键即刻显示；已显示时按键即刻安全退出程序。无需记忆两个按键，一键掌控全局。", -1, &f1_body, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
 
+        SelectFont(hdc, font_bold_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x + Scale(14, dpi), tip_y + Scale(88, dpi),
-                 L"2. 按键顺序无关（Order-Independent Modifiers）：", 29);
+        RECT f2_title = {inner_x + Scale(16, dpi), tip_y + Scale(104, dpi), inner_x + inner_w - Scale(16, dpi), tip_y + Scale(122, dpi)};
+        DrawTextW(hdc, L"2. 按键顺序无关（Order-Independent Modifiers）：", -1, &f2_title, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+        SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(28, dpi), tip_y + Scale(106, dpi),
-                 L"无论先按 Ctrl 还是先按 Alt/Win/Shift，只要修饰键处于按下状态均能 100% 精准触发。", 43);
+        RECT f2_body = {inner_x + Scale(30, dpi), tip_y + Scale(124, dpi), inner_x + inner_w - Scale(20, dpi), tip_y + Scale(168, dpi)};
+        DrawTextW(hdc, L"无论您先按 Ctrl 还是先按 Alt / Win / Shift，只要修饰键处于按下状态并敲击主键均能 100% 精准触发，彻底告别按键死板顺序限制。", -1, &f2_body, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+
       } else if (current_tab_ == 3) {
-        // TAB 3: 系统与更新
+        // TAB 3: 系统与更新 (每个副标题严格排列在复选框下方，绝对无重叠堆叠与截断！)
         SelectFont(hdc, font_card_title_);
         SetTextColor(hdc, cr_text_);
-        TextOutW(hdc, inner_x, card_y + Scale(16, dpi), L"系统整合、启动偏好与在线更新", 16);
+        RECT head_rc = {inner_x, card_y + Scale(16, dpi), inner_x + inner_w, card_y + Scale(36, dpi)};
+        DrawTextW(hdc, L"系统整合、启动偏好与在线更新", -1, &head_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x, card_y + Scale(36, dpi), L"100% 纯绿色便携软件设计，零注册表垃圾残留，零外部临时文件", 28);
+        RECT sub_rc = {inner_x, card_y + Scale(38, dpi), inner_x + inner_w, card_y + Scale(58, dpi)};
+        DrawTextW(hdc, L"100% 纯绿色便携软件设计，零注册表垃圾残留，零外部临时文件", -1, &sub_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+        auto draw_chk_sub = [&](const wchar_t* sub_text, int y_sub) {
+          SelectFont(hdc, font_small_);
+          SetTextColor(hdc, cr_secondary_);
+          RECT rc = {inner_x + Scale(24, dpi), y_sub, inner_x + inner_w, y_sub + Scale(22, dpi)};
+          DrawTextW(hdc, sub_text, -1, &rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+        };
 
         // Row 1: Show on Startup
-        SelectFont(hdc, font_small_);
-        SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(80, dpi),
-                 L"默认不勾选：启动后静默常驻托盘，按热键呼出；勾选则打开软件即刻显示", 33);
-        MoveToEx(hdc, inner_x, card_y + Scale(108, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(108, dpi));
+        draw_chk_sub(L"默认不勾选：启动后静默常驻托盘，按热键呼出；勾选则打开软件即刻显示十字线", card_y + Scale(88, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(114, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(114, dpi));
 
         // Row 2: High DPI & 8K
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(136, dpi),
-                 L"内置 PerMonitorV2 顶级感知，光标跨屏时物理微米级动态缩放，彻底告别过细线条", 39);
-        MoveToEx(hdc, inner_x, card_y + Scale(164, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(164, dpi));
+        draw_chk_sub(L"内置 PerMonitorV2 顶级感知，光标跨屏时物理微米级动态缩放，彻底告别过细线条", card_y + Scale(148, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(174, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(174, dpi));
 
         // Row 3: Autostart
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(192, dpi),
-                 L"仅在当前用户注册表独立启动，纯便携绿色生效，取消勾选即刻彻底清除", 32);
-        MoveToEx(hdc, inner_x, card_y + Scale(220, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(220, dpi));
+        draw_chk_sub(L"仅在当前用户注册表独立启动，纯便携绿色生效，取消勾选即刻彻底清除", card_y + Scale(208, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(234, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(234, dpi));
 
         // Row 4: Update Check
-        TextOutW(hdc, inner_x + Scale(24, dpi), card_y + Scale(248, dpi),
-                 L"后台异步轻量查询 GitHub Releases，发现新版本时在托盘温和提示", 31);
-        MoveToEx(hdc, inner_x, card_y + Scale(276, dpi), nullptr);
-        LineTo(hdc, inner_x + inner_w, card_y + Scale(276, dpi));
+        draw_chk_sub(L"后台异步轻量查询 GitHub Releases，发现新版本时在托盘温和提示", card_y + Scale(268, dpi));
+        MoveToEx(hdc, inner_x, card_y + Scale(294, dpi), nullptr);
+        LineTo(hdc, inner_x + inner_w, card_y + Scale(294, dpi));
 
-        // Row 5: Manual Check Button & Info
+        // Row 5: Version Info & Official Link
         SelectFont(hdc, font_bold_);
         SetTextColor(hdc, RGB(52, 199, 89));
-        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(294, dpi),
-                 L"当前版本: CrossPointer v1.3 • 已是最新正式版", 26);
+        RECT v_rc = {inner_x + Scale(176, dpi), card_y + Scale(314, dpi), inner_x + inner_w, card_y + Scale(332, dpi)};
+        DrawTextW(hdc, L"当前版本: CrossPointer v1.4 • 最新正式版", -1, &v_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
         SelectFont(hdc, font_small_);
         SetTextColor(hdc, cr_secondary_);
-        TextOutW(hdc, inner_x + Scale(175, dpi), card_y + Scale(314, dpi),
-                 L"官方开源仓库: https://github.com/Crucialmer/CrossPointer", 32);
+        RECT url_rc = {inner_x + Scale(176, dpi), card_y + Scale(334, dpi), inner_x + inner_w, card_y + Scale(350, dpi)};
+        DrawTextW(hdc, L"官方开源仓库: https://github.com/Crucialmer/CrossPointer", -1, &url_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
+
+        RECT green_rc = {inner_x + Scale(176, dpi), card_y + Scale(352, dpi), inner_x + inner_w, card_y + Scale(368, dpi)};
+        DrawTextW(hdc, L"100% 纯绿色免安装 • 支持 Windows 10 / 11 架构与 8K 屏", -1, &green_rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
       }
 
       DeleteObject(div_pen);
