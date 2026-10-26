@@ -48,10 +48,28 @@ class UniqueHandle {
   }
   UniqueHandle(const UniqueHandle&) = delete;
   UniqueHandle& operator=(const UniqueHandle&) = delete;
+
+  UniqueHandle(UniqueHandle&& other) noexcept : handle_(other.handle_) {
+    other.handle_ = nullptr;
+  }
+  UniqueHandle& operator=(UniqueHandle&& other) noexcept {
+    if (this != &other) {
+      if (handle_ != nullptr) CloseHandle(handle_);
+      handle_ = other.handle_;
+      other.handle_ = nullptr;
+    }
+    return *this;
+  }
+
+  void reset(HANDLE h = nullptr) noexcept {
+    if (handle_ != nullptr) CloseHandle(handle_);
+    handle_ = h;
+  }
+
   [[nodiscard]] HANDLE get() const noexcept { return handle_; }
 
  private:
-  HANDLE handle_;
+  HANDLE handle_ = nullptr;
 };
 
 // RAII 精度计时器：将 Windows 调度器时钟中断精度提升到 1ms，
@@ -267,7 +285,7 @@ int Run(HINSTANCE instance) {
   for (int i = 0; i < max_tries; ++i) {
     HANDLE h = CreateMutexW(nullptr, FALSE, kMutexName);
     if (h != nullptr && GetLastError() != ERROR_ALREADY_EXISTS) {
-      mutex = UniqueHandle(h);
+      mutex.reset(h);
       break;
     }
     if (h != nullptr) CloseHandle(h);
