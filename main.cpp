@@ -230,7 +230,7 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
               L"• macOS 26 偏好设置：分栏胶囊 Tab 切换，消除压缩，极致宽敞美观\n"
               L"• 8K 与高 DPI 适配：物理微米级动态自适应缩放，线宽永不失真\n"
               L"• 极简加粗激光十字图标：中心圆形镂空光孔，极致辨识度\n"
-              L"• 在线版本更新检查：一键异步检查 GitHub Releases\n"
+              L"• 一键本地直接更新：支持应用内全自动极速静默热升级，无需前往浏览器手动下载\n"
               L"• 绿色开机自启动：独立 HKCU 便携接管，零系统垃圾\n\n"
               L"100% 纯绿色运行，零系统残留。\n"
               L"Copyright © 2026 Crucialmer",
@@ -258,15 +258,28 @@ LRESULT CALLBACK ControllerWndProc(HWND window, UINT message, WPARAM w_param,
 }
 
 int Run(HINSTANCE instance) {
-  const UniqueHandle mutex(CreateMutexW(nullptr, FALSE, kMutexName));
-  if (mutex.get() == nullptr) {
-    MessageBoxW(nullptr, L"无法创建单实例互斥量。", L"错误",
-                MB_OK | MB_ICONERROR);
-    return 1;
+  updater::CleanupOldExecutable();
+
+  const bool is_update_restart =
+      (wcsstr(GetCommandLineW(), L"--update-restart") != nullptr);
+  UniqueHandle mutex;
+  const int max_tries = is_update_restart ? 30 : 1;
+  for (int i = 0; i < max_tries; ++i) {
+    HANDLE h = CreateMutexW(nullptr, FALSE, kMutexName);
+    if (h != nullptr && GetLastError() != ERROR_ALREADY_EXISTS) {
+      mutex = UniqueHandle(h);
+      break;
+    }
+    if (h != nullptr) CloseHandle(h);
+    if (!is_update_restart) break;
+    Sleep(100);
   }
-  if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    MessageBoxW(nullptr, L"CrossPointer 已经在运行中（可在右下角系统托盘找到）。", L"提示",
-                MB_OK | MB_ICONINFORMATION);
+
+  if (mutex.get() == nullptr) {
+    if (!is_update_restart) {
+      MessageBoxW(nullptr, L"CrossPointer 已经在运行中（可在右下角系统托盘找到）。", L"提示",
+                  MB_OK | MB_ICONINFORMATION);
+    }
     return 0;
   }
 
@@ -323,9 +336,13 @@ int Run(HINSTANCE instance) {
   }
 
   context.tray.Initialize(instance, controller);
-  context.tray.UpdateTooltip(
-      FormatHotkeyTooltip(context.raw_config.hotkey_h_s,
-                          context.raw_config.hotkey_exit));
+  if (is_update_restart) {
+    context.tray.UpdateTooltip(L"CrossPointer 🎯 (已成功直接更新至最新版本！)");
+  } else {
+    context.tray.UpdateTooltip(
+        FormatHotkeyTooltip(context.raw_config.hotkey_h_s,
+                            context.raw_config.hotkey_exit));
+  }
 
   if (context.raw_config.auto_check_update) {
     updater::CheckUpdateAsync(controller, /*silent_if_latest=*/true);
